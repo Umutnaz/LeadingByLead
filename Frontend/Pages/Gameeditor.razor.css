@@ -144,8 +144,8 @@
 
 .list-card {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: .9rem;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    gap: .8rem;
     align-items: start;
     padding: .9rem;
     border-radius: 1rem;
@@ -185,10 +185,23 @@
             0 .45rem 0 rgba(70, 23, 143, .18);
 }
 
+.list-number {
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border-radius: .55rem;
+    background: #46178f;
+    color: white;
+    font-weight: 1000;
+    box-shadow: 0 .18rem 0 rgba(0, 0, 0, .2);
+}
+
 .select-zone {
     display: grid;
     place-items: center;
-    margin-top: .2rem;
+    margin-top: .15rem;
     cursor: pointer;
 }
 
@@ -378,10 +391,6 @@ button:disabled {
     box-shadow:
             0 .8rem 0 rgba(0, 0, 0, .22),
             0 1.6rem 3rem rgba(0, 0, 0, .18);
-}
-
-.success-icon {
-    font-size: 3.2rem;
 }
 
 .created-card h1 {

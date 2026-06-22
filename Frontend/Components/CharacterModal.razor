@@ -11,57 +11,161 @@
                     <span class="modal-kicker">Character</span>
                     <h4>@(IsEdit ? "Rediger character" : "Opret character")</h4>
                 </div>
+
                 <button class="close-button" @onclick="Close">×</button>
             </header>
 
-            <div class="form-grid full">
-                <label>
-                    <span>Navn</span>
-                    <input @bind="Model.Name" placeholder="Character navn" />
-                </label>
+            <div class="modal-content">
+                <div class="form-grid">
+                    <label>
+                        <span>Navn</span>
+                        <input @bind="Model.Name"
+                               placeholder="Character navn" />
+                    </label>
 
-                <label>
-                    <span>Beskrivelse</span>
-                    <textarea @bind="Model.Description" placeholder="Kort beskrivelse af characteren"></textarea>
-                </label>
-            </div>
+                    <label>
+                        <span>Beskrivelse</span>
 
-            <h5>Traits</h5>
-            <div class="trait-grid">
-                @NumberField("Strukturbehov", Model.Traits.Strukturbehov, value => Model.Traits.Strukturbehov = value)
-                @NumberField("Socialt behov", Model.Traits.SocialtBehov, value => Model.Traits.SocialtBehov = value)
-                @NumberField("Risikovillighed", Model.Traits.Risikovillighed, value => Model.Traits.Risikovillighed = value)
-                @NumberField("Pres tolerance", Model.Traits.PresTolerance, value => Model.Traits.PresTolerance = value)
-                @NumberField("Fysisk", Model.Traits.Fysisk, value => Model.Traits.Fysisk = value)
-                @NumberField("Erfaringsniveau", Model.Traits.Erfaringsniveau, value => Model.Traits.Erfaringsniveau = value)
+                        <textarea @bind="Model.Description"
+                                  placeholder="Kort beskrivelse af characteren"></textarea>
+                    </label>
+                </div>
+
+                <div class="trait-heading">
+                    <div>
+                        <h5>Traits</h5>
+                        <p>Alle værdier går fra 0 til 100.</p>
+                    </div>
+
+                    <span class="scale-badge">0 — 100</span>
+                </div>
+
+                <div class="trait-grid">
+                    @NumberField(
+                        "Strukturbehov",
+                        "80 = har stort behov for klare rammer og faste planer.",
+                        Model.Traits.Strukturbehov,
+                        value => Model.Traits.Strukturbehov = value)
+
+                    @NumberField(
+                        "Socialt behov",
+                        "80 = søger meget kontakt, støtte og fællesskab.",
+                        Model.Traits.SocialtBehov,
+                        value => Model.Traits.SocialtBehov = value)
+
+                    @NumberField(
+                        "Risikovillighed",
+                        "80 = tager let store chancer og usikre valg.",
+                        Model.Traits.Risikovillighed,
+                        value => Model.Traits.Risikovillighed = value)
+
+                    @NumberField(
+                        "Prestolerance",
+                        "80 = fungerer godt og bevarer roen under pres.",
+                        Model.Traits.PresTolerance,
+                        value => Model.Traits.PresTolerance = value)
+
+                    @NumberField(
+                        "Fysisk",
+                        "80 = har høj fysisk styrke og udholdenhed.",
+                        Model.Traits.Fysisk,
+                        value => Model.Traits.Fysisk = value)
+
+                    @NumberField(
+                        "Erfaringsniveau",
+                        "80 = er meget erfaren og handler sikkert.",
+                        Model.Traits.Erfaringsniveau,
+                        value => Model.Traits.Erfaringsniveau = value)
+                </div>
             </div>
 
             <footer class="modal-actions">
-                <button class="secondary-button" @onclick="Close">Annuller</button>
-                <button class="save-button" @onclick="Save">Gem character</button>
+                <button class="secondary-button" @onclick="Close">
+                    Annuller
+                </button>
+
+                <button class="save-button" @onclick="Save">
+                    Gem character
+                </button>
             </footer>
         </div>
     </div>
 }
 
 @code {
-    [Parameter] public bool Visible { get; set; }
-    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
-    [Parameter] public Character Model { get; set; } = new();
+    [Parameter]
+    public bool Visible { get; set; }
 
-    private bool IsEdit => !string.IsNullOrEmpty(Model?.Id);
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter]
+    public Character Model { get; set; } = new();
+
+    private bool IsEdit => !string.IsNullOrWhiteSpace(Model.Id);
 
     private async Task Save()
     {
-        if (IsEdit) await CharacterService.UpdateCharacterAsync(Model.Id!, Model);
-        else await CharacterService.CreateCharacterAsync(Model);
+        ClampValues();
+
+        if (IsEdit)
+            await CharacterService.UpdateCharacterAsync(Model.Id, Model);
+        else
+            await CharacterService.CreateCharacterAsync(Model);
+
         await VisibleChanged.InvokeAsync(false);
     }
 
-    private async Task Close() => await VisibleChanged.InvokeAsync(false);
+    private async Task Close()
+    {
+        await VisibleChanged.InvokeAsync(false);
+    }
 
-    private RenderFragment NumberField(string label, int value, Action<int> setValue) => @<label class="trait-field">
-        <span>@label</span>
-        <input type="number" min="0" max="100" value="@value" @onchange="e => setValue(int.TryParse(e.Value?.ToString(), out var n) ? Math.Clamp(n, 0, 100) : 0)" />
+    private void ClampValues()
+    {
+        Model.Traits.Strukturbehov =
+            Math.Clamp(Model.Traits.Strukturbehov, 0, 100);
+
+        Model.Traits.SocialtBehov =
+            Math.Clamp(Model.Traits.SocialtBehov, 0, 100);
+
+        Model.Traits.Risikovillighed =
+            Math.Clamp(Model.Traits.Risikovillighed, 0, 100);
+
+        Model.Traits.PresTolerance =
+            Math.Clamp(Model.Traits.PresTolerance, 0, 100);
+
+        Model.Traits.Fysisk =
+            Math.Clamp(Model.Traits.Fysisk, 0, 100);
+
+        Model.Traits.Erfaringsniveau =
+            Math.Clamp(Model.Traits.Erfaringsniveau, 0, 100);
+    }
+
+    private RenderFragment NumberField(
+        string label,
+        string description,
+        int value,
+        Action<int> setValue) => @<label class="trait-field">
+        <span class="trait-name">@label</span>
+
+        <input type="number"
+               min="0"
+               max="100"
+               value="@value"
+               @onchange="e => SetTraitValue(e, setValue)" />
+
+        <small>@description</small>
     </label>;
+
+    private static void SetTraitValue(
+        ChangeEventArgs eventArgs,
+        Action<int> setValue)
+    {
+        var parsed = int.TryParse(
+            eventArgs.Value?.ToString(),
+            out var number);
+
+        setValue(parsed ? Math.Clamp(number, 0, 100) : 0);
+    }
 }

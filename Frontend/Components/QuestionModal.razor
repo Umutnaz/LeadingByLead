@@ -5,80 +5,332 @@
 @if (Visible)
 {
     <div class="modal-backdrop">
-        <div class="modal-card large">
+        <div class="modal-card">
             <header class="modal-header">
                 <div>
                     <span class="modal-kicker">Spørgsmål</span>
                     <h4>@(IsEdit ? "Rediger spørgsmål" : "Opret spørgsmål")</h4>
                 </div>
+
                 <button class="close-button" @onclick="Close">×</button>
             </header>
 
-            <label class="question-field">
-                <span>Spørgsmålstekst</span>
-                <textarea @bind="Model.Text" placeholder="Skriv dit scenarie/spørgsmål her"></textarea>
-            </label>
+            <div class="modal-content">
+                <label class="question-field">
+                    <span>Spørgsmålstekst</span>
 
-            <section class="options-section">
-                <div class="section-title">
-                    <h5>Svarmuligheder</h5>
-                    <button class="add-button" @onclick="AddOption">+ Tilføj svar</button>
-                </div>
+                    <textarea @bind="Model.Text"
+                              placeholder="Skriv dit scenarie eller spørgsmål"></textarea>
+                </label>
 
-                @if (Model.AnswerOptions.Count == 0)
-                {
-                    <div class="empty-options">Ingen svarmuligheder endnu.</div>
-                }
-                else
-                {
-                    <div class="option-list">
-                        @foreach (var option in Model.AnswerOptions.Select((value, index) => new { value, index }))
-                        {
-                            <article class="option-card option-@option.index">
-                                <span class="shape">@GetAnswerIcon(option.index)</span>
-                                <input @bind="option.value.Text" />
-                                <small>@option.value.Rules.Count regler</small>
-                                <button class="delete-button" @onclick="() => RemoveOption(option.value.Id)">Slet</button>
-                            </article>
-                        }
+                <section class="options-section">
+                    <div class="section-title">
+                        <h5>Svarmuligheder</h5>
+
+                        <button class="add-button" @onclick="AddOption">
+                            + Tilføj svar
+                        </button>
                     </div>
-                }
-            </section>
+
+                    @if (Model.AnswerOptions.Count == 0)
+                    {
+                        <div class="empty-options">
+                            Ingen svarmuligheder endnu.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="option-list">
+                            @foreach (var optionItem in Model.AnswerOptions.Select((value, index) => new { value, index }))
+                            {
+                                var option = optionItem.value;
+
+                                <article class="option-card option-@(optionItem.index % 5)"
+                                         @key="option.Id">
+
+                                    <div class="option-header">
+                                        <span class="option-number">
+                                            @(optionItem.index + 1)
+                                        </span>
+
+                                        <input class="answer-input"
+                                               @bind="option.Text"
+                                               placeholder="Skriv svarmuligheden" />
+
+                                        <button class="delete-button"
+                                                @onclick="() => RemoveOption(option)">
+                                            Slet svar
+                                        </button>
+                                    </div>
+
+                                    <div class="rules-section">
+                                        <div class="rules-header">
+                                            <strong>Regler</strong>
+
+                                            <button class="rule-add-button"
+                                                    @onclick="() => AddRule(option)">
+                                                + Tilføj regel
+                                            </button>
+                                        </div>
+
+                                        @if (option.Rules.Count == 0)
+                                        {
+                                            <div class="empty-rules">
+                                                Ingen regler på denne svarmulighed.
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="rule-list">
+                                                @foreach (var ruleItem in option.Rules.Select((value, index) => new { value, index }))
+                                                {
+                                                    var rule = ruleItem.value;
+
+                                                    <div class="rule-row" @key="rule">
+                                                        <span class="rule-number">
+                                                            @(ruleItem.index + 1)
+                                                        </span>
+
+                                                        <span>Alle med</span>
+
+                                                        <select @bind="rule.ConditionStat">
+                                                            @foreach (var trait in TraitNames)
+                                                            {
+                                                                <option value="@trait">
+                                                                    @GetStatLabel(trait)
+                                                                </option>
+                                                            }
+                                                        </select>
+
+                                                        <select @bind="rule.Operator">
+                                                            <option value="@RuleOperator.GreaterThan">
+                                                                over
+                                                            </option>
+
+                                                            <option value="@RuleOperator.LessThan">
+                                                                under
+                                                            </option>
+                                                        </select>
+
+                                                        <input class="small-number"
+                                                               type="number"
+                                                               min="0"
+                                                               max="100"
+                                                               value="@rule.CompareValue"
+                                                               @onchange="e => ChangeCompareValue(rule, e)" />
+
+                                                        <span>får</span>
+
+                                                        <select @bind="rule.EffectStat">
+                                                            @foreach (var stat in CurrentStatNames)
+                                                            {
+                                                                <option value="@stat">
+                                                                    @GetStatLabel(stat)
+                                                                </option>
+                                                            }
+                                                        </select>
+
+                                                        <select class="sign-select"
+                                                                value="@GetChangeSign(rule)"
+                                                                @onchange="e => ChangeSign(rule, e)">
+                                                            <option value="+">+</option>
+                                                            <option value="-">−</option>
+                                                        </select>
+
+                                                        <input class="small-number"
+                                                               type="number"
+                                                               min="0"
+                                                               max="100"
+                                                               value="@GetChangeAmount(rule)"
+                                                               @onchange="e => ChangeAmount(rule, e)" />
+
+                                                        <button class="rule-delete-button"
+                                                                @onclick="() => RemoveRule(option, rule)">
+                                                            Slet
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </section>
+            </div>
 
             <footer class="modal-actions">
-                <button class="secondary-button" @onclick="Close">Annuller</button>
-                <button class="save-button" @onclick="Save">Gem spørgsmål</button>
+                <button class="secondary-button" @onclick="Close">
+                    Annuller
+                </button>
+
+                <button class="save-button" @onclick="Save">
+                    Gem spørgsmål
+                </button>
             </footer>
         </div>
     </div>
 }
 
 @code {
-    [Parameter] public bool Visible { get; set; }
-    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
-    [Parameter] public Question Model { get; set; } = new();
+    [Parameter]
+    public bool Visible { get; set; }
 
-    private bool IsEdit => !string.IsNullOrEmpty(Model?.Id);
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
 
-    private void AddOption() => Model.AnswerOptions.Add(new AnswerOption { Text = "Ny svarmulighed" });
+    [Parameter]
+    public Question Model { get; set; } = new();
 
-    private void RemoveOption(string id) => Model.AnswerOptions.RemoveAll(a => a.Id == id);
+    private bool IsEdit => !string.IsNullOrWhiteSpace(Model.Id);
+
+    private static readonly string[] CurrentStatNames =
+    {
+        nameof(CurrentStats.TjenesteMotivation),
+        nameof(CurrentStats.Stress),
+        nameof(CurrentStats.Sociallyst),
+        nameof(CurrentStats.Tillid)
+    };
+
+    private static readonly string[] TraitNames =
+    {
+        nameof(CharacterTraits.Strukturbehov),
+        nameof(CharacterTraits.SocialtBehov),
+        nameof(CharacterTraits.Risikovillighed),
+        nameof(CharacterTraits.PresTolerance),
+        nameof(CharacterTraits.Fysisk),
+        nameof(CharacterTraits.Erfaringsniveau)
+    };
+
+    private void AddOption()
+    {
+        Model.AnswerOptions.Add(new AnswerOption
+        {
+            Text = "Ny svarmulighed"
+        });
+    }
+
+    private void RemoveOption(AnswerOption option)
+    {
+        Model.AnswerOptions.Remove(option);
+    }
+
+    private void AddRule(AnswerOption option)
+    {
+        option.Rules.Add(new Rule
+        {
+            TargetGroup = StatGroup.Traits,
+            ConditionStat = nameof(CharacterTraits.Strukturbehov),
+            Operator = RuleOperator.GreaterThan,
+            CompareValue = 50,
+            EffectStat = nameof(CurrentStats.Stress),
+            ChangeValue = 10
+        });
+    }
+
+    private void RemoveRule(AnswerOption option, Rule rule)
+    {
+        option.Rules.Remove(rule);
+    }
+
+    private static void ChangeCompareValue(
+        Rule rule,
+        ChangeEventArgs eventArgs)
+    {
+        if (!int.TryParse(eventArgs.Value?.ToString(), out var value))
+            value = 0;
+
+        rule.CompareValue = Math.Clamp(value, 0, 100);
+    }
+
+    private static string GetChangeSign(Rule rule)
+    {
+        return rule.ChangeValue < 0 ? "-" : "+";
+    }
+
+    private static int GetChangeAmount(Rule rule)
+    {
+        return Math.Clamp(Math.Abs(rule.ChangeValue), 0, 100);
+    }
+
+    private static void ChangeSign(
+        Rule rule,
+        ChangeEventArgs eventArgs)
+    {
+        var amount = Math.Clamp(Math.Abs(rule.ChangeValue), 0, 100);
+        var sign = eventArgs.Value?.ToString();
+
+        rule.ChangeValue = sign == "-"
+            ? -amount
+            : amount;
+    }
+
+    private static void ChangeAmount(
+        Rule rule,
+        ChangeEventArgs eventArgs)
+    {
+        if (!int.TryParse(eventArgs.Value?.ToString(), out var amount))
+            amount = 0;
+
+        amount = Math.Clamp(Math.Abs(amount), 0, 100);
+
+        rule.ChangeValue = rule.ChangeValue < 0
+            ? -amount
+            : amount;
+    }
+
+    private static string GetStatLabel(string stat)
+    {
+        return stat switch
+        {
+            nameof(CurrentStats.TjenesteMotivation) => "Tjenestemotivation",
+            nameof(CurrentStats.Stress) => "Stress",
+            nameof(CurrentStats.Sociallyst) => "Social lyst",
+            nameof(CurrentStats.Tillid) => "Tillid",
+
+            nameof(CharacterTraits.Strukturbehov) => "Strukturbehov",
+            nameof(CharacterTraits.SocialtBehov) => "Socialt behov",
+            nameof(CharacterTraits.Risikovillighed) => "Risikovillighed",
+            nameof(CharacterTraits.PresTolerance) => "Prestolerance",
+            nameof(CharacterTraits.Fysisk) => "Fysisk",
+            nameof(CharacterTraits.Erfaringsniveau) => "Erfaringsniveau",
+
+            _ => stat
+        };
+    }
+
+    private void ClampRules()
+    {
+        foreach (var option in Model.AnswerOptions)
+        {
+            foreach (var rule in option.Rules)
+            {
+                rule.TargetGroup = StatGroup.Traits;
+                rule.CompareValue = Math.Clamp(rule.CompareValue, 0, 100);
+
+                var sign = rule.ChangeValue < 0 ? -1 : 1;
+                var amount = Math.Clamp(Math.Abs(rule.ChangeValue), 0, 100);
+
+                rule.ChangeValue = sign * amount;
+            }
+        }
+    }
 
     private async Task Save()
     {
-        if (IsEdit) await QuestionService.UpdateQuestionAsync(Model.Id!, Model);
-        else await QuestionService.CreateQuestionAsync(Model);
+        ClampRules();
+
+        if (IsEdit)
+            await QuestionService.UpdateQuestionAsync(Model.Id, Model);
+        else
+            await QuestionService.CreateQuestionAsync(Model);
+
         await VisibleChanged.InvokeAsync(false);
     }
 
-    private async Task Close() => await VisibleChanged.InvokeAsync(false);
-
-    private string GetAnswerIcon(int index) => index switch
+    private async Task Close()
     {
-        0 => "▲",
-        1 => "◆",
-        2 => "●",
-        3 => "■",
-        _ => "★"
-    };
+        await VisibleChanged.InvokeAsync(false);
+    }
 }

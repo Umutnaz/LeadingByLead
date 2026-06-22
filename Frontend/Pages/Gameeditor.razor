@@ -8,158 +8,264 @@
 @inject LocalStorageService LocalStorage
 @inject NavigationManager Navigation
 
-
 <PageTitle>Game Editor - LeadingByLead</PageTitle>
 
 <main class="editor-page">
-@if (string.IsNullOrEmpty(currentSessionId))
-{
-    <section class="editor-hero">
-        <div>
-            <span class="eyebrow">Host panel</span>
-            <h1>Byg dit spil</h1>
-            <p>Vælg de spørgsmål og characters, der skal indgå, eller opret nye direkte fra editoren.</p>
-        </div>
-        <button class="ghost-button" @onclick="GoHome">← Tilbage</button>
-    </section>
+    @if (string.IsNullOrEmpty(currentSessionId))
+    {
+        <section class="editor-hero">
+            <div>
+                <span class="eyebrow">Host panel</span>
+                <h1>Byg dit spil</h1>
+                <p>Vælg de spørgsmål og characters, der skal indgå, eller opret nye direkte fra editoren.</p>
+            </div>
 
-    <section class="editor-grid">
-        <article class="editor-panel questions-panel">
-            <header class="panel-header">
-                <div>
-                    <span class="panel-kicker">Spørgsmål</span>
-                    <h2>Alle spørgsmål</h2>
+            <button class="ghost-button" @onclick="GoHome">
+                ← Tilbage
+            </button>
+        </section>
+
+        <section class="editor-grid">
+            <article class="editor-panel questions-panel">
+                <header class="panel-header">
+                    <div>
+                        <span class="panel-kicker">Spørgsmål</span>
+                        <h2>Alle spørgsmål</h2>
+                    </div>
+
+                    <button class="primary-button"
+                            @onclick="() => OpenQuestionModal(null)">
+                        + Opret spørgsmål
+                    </button>
+                </header>
+
+                <div class="selected-count">
+                    Valgt til spil:
+                    <strong>@selectedQuestions.Count</strong>
                 </div>
-                <button class="primary-button" @onclick="() => OpenQuestionModal(null)">+ Opret spørgsmål</button>
-            </header>
 
-            <div class="selected-count">Valgt til spil: <strong>@selectedQuestions.Count</strong></div>
+                @if (allQuestions == null)
+                {
+                    <div class="empty-state">
+                        Henter spørgsmål...
+                    </div>
+                }
+                else if (allQuestions.Count == 0)
+                {
+                    <div class="empty-state">
+                        Ingen spørgsmål endnu. Opret det første spørgsmål.
+                    </div>
+                }
+                else
+                {
+                    <div class="item-list">
+                        @foreach (var questionItem in allQuestions.Select((value, index) => new { value, index }))
+                        {
+                            var question = questionItem.value;
+                            var selected = selectedQuestions.Any(q => q.Id == question.Id);
 
-            @if (allQuestions == null)
-            {
-                <div class="empty-state">Henter spørgsmål...</div>
-            }
-            else if (allQuestions.Count == 0)
-            {
-                <div class="empty-state">Ingen spørgsmål endnu. Opret det første spørgsmål.</div>
-            }
-            else
-            {
-                <div class="item-list">
-                    @foreach (var question in allQuestions)
-                    {
-                        var selected = selectedQuestions.Any(q => q.Id == question.Id);
-                        <div class="list-card @(selected ? "is-selected" : "")">
-                            <label class="select-zone">
-                                <input type="checkbox" checked="@selected" @onchange="e => ToggleQuestion(question, (bool)e.Value!)" />
-                                <span class="check-ui"></span>
-                            </label>
-                            <div class="item-main" @onclick="() => ToggleQuestion(question, !selected)">
-                                <h3>@question.Text</h3>
-                                <p>@question.AnswerOptions.Count svarmuligheder</p>
-                            </div>
-                            <div class="item-actions">
-                                <button class="small-button blue" @onclick="() => OpenQuestionModal(question)">Rediger</button>
-                                <button class="small-button red" @onclick="() => DeleteQuestion(question.Id)">Slet</button>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-        </article>
+                            <div class="list-card @(selected ? "is-selected" : "")">
+                                <span class="list-number">
+                                    @(questionItem.index + 1)
+                                </span>
 
-        <article class="editor-panel characters-panel">
-            <header class="panel-header">
-                <div>
-                    <span class="panel-kicker">Characters</span>
-                    <h2>Alle characters</h2>
-                </div>
-                <button class="primary-button" @onclick="() => OpenCharacterModal(null)">+ Opret character</button>
-            </header>
+                                <label class="select-zone">
+                                    <input type="checkbox"
+                                           checked="@selected"
+                                           @onchange="e => ToggleQuestion(question, (bool)e.Value!)" />
 
-            <div class="selected-count">Valgt til spil: <strong>@selectedCharacters.Count</strong></div>
+                                    <span class="check-ui"></span>
+                                </label>
 
-            @if (allCharacters == null)
-            {
-                <div class="empty-state">Henter characters...</div>
-            }
-            else if (allCharacters.Count == 0)
-            {
-                <div class="empty-state">Ingen characters endnu. Opret den første character.</div>
-            }
-            else
-            {
-                <div class="item-list">
-                    @foreach (var character in allCharacters)
-                    {
-                        var selected = selectedCharacters.Any(c => c.Id == character.Id);
-                        <div class="list-card @(selected ? "is-selected" : "")">
-                            <label class="select-zone">
-                                <input type="checkbox" checked="@selected" @onchange="e => ToggleCharacter(character, (bool)e.Value!)" />
-                                <span class="check-ui"></span>
-                            </label>
-                            <div class="item-main" @onclick="() => ToggleCharacter(character, !selected)">
-                                <h3>@character.Name</h3>
-                                <p>@character.Description</p>
-                                <div class="stat-chips">
-                                    <span>Struktur @character.Traits.Strukturbehov</span>
-                                    <span>Social @character.Traits.SocialtBehov</span>
-                                    <span>Pres @character.Traits.PresTolerance</span>
+                                <div class="item-main"
+                                     @onclick="() => ToggleQuestion(question, !selected)">
+                                    <h3>@question.Text</h3>
+
+                                    <p>
+                                        @question.AnswerOptions.Count svarmuligheder
+                                    </p>
+                                </div>
+
+                                <div class="item-actions">
+                                    <button class="small-button blue"
+                                            @onclick="() => OpenQuestionModal(question)">
+                                        Rediger
+                                    </button>
+
+                                    <button class="small-button red"
+                                            @onclick="() => DeleteQuestion(question.Id)">
+                                        Slet
+                                    </button>
                                 </div>
                             </div>
-                            <div class="item-actions">
-                                <button class="small-button blue" @onclick="() => OpenCharacterModal(character)">Rediger</button>
-                                <button class="small-button red" @onclick="() => DeleteCharacter(character.Id!)">Slet</button>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-        </article>
-    </section>
+                        }
+                    </div>
+                }
+            </article>
 
-    <section class="create-bar">
-        <div>
-            <strong>@selectedQuestions.Count spørgsmål</strong>
-            <span>og</span>
-            <strong>@selectedCharacters.Count characters</strong>
-            <span>valgt</span>
-        </div>
-        <button class="start-button" @onclick="CreateGame" disabled="@(selectedCharacters.Count == 0 || selectedQuestions.Count == 0)">
-            🎮 Opret spil
-        </button>
-    </section>
-}
-else
-{
-    <section class="created-screen">
-        <div class="created-card">
-            <span class="success-icon">✅</span>
-            <h1>Spil oprettet</h1>
-            <p>Del session ID'et med spillerne.</p>
-            <div class="session-code">@currentSessionId</div>
-            <div class="created-meta">
-                <span>@selectedQuestions.Count spørgsmål</span>
-                <span>@selectedCharacters.Count characters</span>
+            <article class="editor-panel characters-panel">
+                <header class="panel-header">
+                    <div>
+                        <span class="panel-kicker">Characters</span>
+                        <h2>Alle characters</h2>
+                    </div>
+
+                    <button class="primary-button"
+                            @onclick="() => OpenCharacterModal(null)">
+                        + Opret character
+                    </button>
+                </header>
+
+                <div class="selected-count">
+                    Valgt til spil:
+                    <strong>@selectedCharacters.Count</strong>
+                </div>
+
+                @if (allCharacters == null)
+                {
+                    <div class="empty-state">
+                        Henter characters...
+                    </div>
+                }
+                else if (allCharacters.Count == 0)
+                {
+                    <div class="empty-state">
+                        Ingen characters endnu. Opret den første character.
+                    </div>
+                }
+                else
+                {
+                    <div class="item-list">
+                        @foreach (var characterItem in allCharacters.Select((value, index) => new { value, index }))
+                        {
+                            var character = characterItem.value;
+                            var selected = selectedCharacters.Any(c => c.Id == character.Id);
+
+                            <div class="list-card @(selected ? "is-selected" : "")">
+                                <span class="list-number">
+                                    @(characterItem.index + 1)
+                                </span>
+
+                                <label class="select-zone">
+                                    <input type="checkbox"
+                                           checked="@selected"
+                                           @onchange="e => ToggleCharacter(character, (bool)e.Value!)" />
+
+                                    <span class="check-ui"></span>
+                                </label>
+
+                                <div class="item-main"
+                                     @onclick="() => ToggleCharacter(character, !selected)">
+                                    <h3>@character.Name</h3>
+
+                                    <p>@character.Description</p>
+
+                                    <div class="stat-chips">
+                                        <span>
+                                            Struktur @character.Traits.Strukturbehov
+                                        </span>
+
+                                        <span>
+                                            Social @character.Traits.SocialtBehov
+                                        </span>
+
+                                        <span>
+                                            Pres @character.Traits.PresTolerance
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="item-actions">
+                                    <button class="small-button blue"
+                                            @onclick="() => OpenCharacterModal(character)">
+                                        Rediger
+                                    </button>
+
+                                    <button class="small-button red"
+                                            @onclick="() => DeleteCharacter(character.Id)">
+                                        Slet
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </article>
+        </section>
+
+        <section class="create-bar">
+            <div>
+                <strong>@selectedQuestions.Count spørgsmål</strong>
+                <span>og</span>
+                <strong>@selectedCharacters.Count characters</strong>
+                <span>valgt</span>
             </div>
-            <button class="start-button full" @onclick="GoToWaitingArea">Gå til venteområde →</button>
-        </div>
-    </section>
-}
+
+            <button class="start-button"
+                    @onclick="CreateGame"
+                    disabled="@(selectedCharacters.Count == 0 || selectedQuestions.Count == 0)">
+                Opret spil
+            </button>
+        </section>
+    }
+    else
+    {
+        <section class="created-screen">
+            <div class="created-card">
+                <h1>Spil oprettet</h1>
+
+                <p>Del session ID'et med spillerne.</p>
+
+                <div class="session-code">
+                    @currentSessionId
+                </div>
+
+                <div class="created-meta">
+                    <span>@selectedQuestions.Count spørgsmål</span>
+                    <span>@selectedCharacters.Count characters</span>
+                </div>
+
+                <button class="start-button full"
+                        @onclick="GoToWaitingArea">
+                    Gå til venteområde →
+                </button>
+            </div>
+        </section>
+    }
 </main>
 
-<CharacterModal Visible="@showCharacterModal" VisibleChanged="@(async v => { showCharacterModal = v; if (!v) await RefreshLists(); })" Model="@editingCharacter" />
-<QuestionModal Visible="@showQuestionModal" VisibleChanged="@(async v => { showQuestionModal = v; if (!v) await RefreshLists(); })" Model="@editingQuestion" />
+<CharacterModal Visible="@showCharacterModal"
+                VisibleChanged="@(async value =>
+                                {
+                                    showCharacterModal = value;
+
+                                    if (!value)
+                                        await RefreshLists();
+                                })"
+                Model="@editingCharacter" />
+
+<QuestionModal Visible="@showQuestionModal"
+               VisibleChanged="@(async value =>
+                               {
+                                   showQuestionModal = value;
+
+                                   if (!value)
+                                       await RefreshLists();
+                               })"
+               Model="@editingQuestion" />
 
 @code {
     private List<Character>? allCharacters;
     private List<Question>? allQuestions;
+
     private List<Character> selectedCharacters = new();
     private List<Question> selectedQuestions = new();
+
     private string currentSessionId = "";
 
     private bool showCharacterModal;
     private Character editingCharacter = new();
+
     private bool showQuestionModal;
     private Question editingQuestion = new();
 
@@ -172,6 +278,7 @@ else
         }
 
         currentSessionId = LocalStorage.GetCurrentSessionId();
+
         await RefreshLists();
     }
 
@@ -181,60 +288,105 @@ else
         {
             allCharacters = await CharacterService.GetAllCharactersAsync();
             allQuestions = await QuestionService.GetAllQuestionsAsync();
-            selectedCharacters = selectedCharacters.Where(sc => allCharacters.Any(c => c.Id == sc.Id)).ToList();
-            selectedQuestions = selectedQuestions.Where(sq => allQuestions.Any(q => q.Id == sq.Id)).ToList();
+
+            selectedCharacters = selectedCharacters
+                .Where(selected => allCharacters.Any(character => character.Id == selected.Id))
+                .ToList();
+
+            selectedQuestions = selectedQuestions
+                .Where(selected => allQuestions.Any(question => question.Id == selected.Id))
+                .ToList();
+
             StateHasChanged();
         }
-        catch { }
+        catch
+        {
+        }
     }
 
     private void OpenCharacterModal(Character? character)
     {
         editingCharacter = character == null
-            ? new Character { CurrentStats = new CurrentStats(), Traits = new CharacterTraits() }
+            ? new Character
+            {
+                CurrentStats = new CurrentStats(),
+                Traits = new CharacterTraits()
+            }
             : CloneCharacter(character);
+
         showCharacterModal = true;
     }
 
     private void OpenQuestionModal(Question? question)
     {
-        editingQuestion = question == null ? new Question() : CloneQuestion(question);
+        editingQuestion = question == null
+            ? new Question()
+            : CloneQuestion(question);
+
         showQuestionModal = true;
     }
 
     private async Task DeleteCharacter(string id)
     {
         await CharacterService.DeleteCharacterAsync(id);
-        selectedCharacters = selectedCharacters.Where(c => c.Id != id).ToList();
+
+        selectedCharacters = selectedCharacters
+            .Where(character => character.Id != id)
+            .ToList();
+
         await RefreshLists();
     }
 
     private async Task DeleteQuestion(string id)
     {
         await QuestionService.DeleteQuestionAsync(id);
-        selectedQuestions = selectedQuestions.Where(q => q.Id != id).ToList();
+
+        selectedQuestions = selectedQuestions
+            .Where(question => question.Id != id)
+            .ToList();
+
         await RefreshLists();
     }
 
     private void ToggleCharacter(Character character, bool isChecked)
     {
-        if (isChecked && !selectedCharacters.Any(c => c.Id == character.Id)) selectedCharacters.Add(character);
-        if (!isChecked) selectedCharacters = selectedCharacters.Where(c => c.Id != character.Id).ToList();
+        if (isChecked && selectedCharacters.All(item => item.Id != character.Id))
+            selectedCharacters.Add(character);
+
+        if (!isChecked)
+        {
+            selectedCharacters = selectedCharacters
+                .Where(item => item.Id != character.Id)
+                .ToList();
+        }
     }
 
     private void ToggleQuestion(Question question, bool isChecked)
     {
-        if (isChecked && !selectedQuestions.Any(q => q.Id == question.Id)) selectedQuestions.Add(question);
-        if (!isChecked) selectedQuestions = selectedQuestions.Where(q => q.Id != question.Id).ToList();
+        if (isChecked && selectedQuestions.All(item => item.Id != question.Id))
+            selectedQuestions.Add(question);
+
+        if (!isChecked)
+        {
+            selectedQuestions = selectedQuestions
+                .Where(item => item.Id != question.Id)
+                .ToList();
+        }
     }
 
     private async Task CreateGame()
     {
-        if (selectedCharacters.Count == 0 || selectedQuestions.Count == 0) return;
+        if (selectedCharacters.Count == 0 || selectedQuestions.Count == 0)
+            return;
 
         var session = new GameSession
         {
-            Host = new Player { Name = "Host", Role = PlayerRole.Host },
+            Host = new Player
+            {
+                Name = "Host",
+                Role = PlayerRole.Host
+            },
+
             Characters = selectedCharacters,
             Questions = selectedQuestions,
             State = GameState.Lobby,
@@ -243,58 +395,77 @@ else
         };
 
         var created = await GameSessionService.CreateSessionAsync(session);
-        if (created?.Id != null)
-        {
-            currentSessionId = created.Id;
-            LocalStorage.SetCurrentSessionId(created.Id);
-            LocalStorage.SavePlayerCharacters(selectedCharacters);
-        }
+
+        if (created?.Id == null)
+            return;
+
+        currentSessionId = created.Id;
+
+        LocalStorage.SetCurrentSessionId(created.Id);
+        LocalStorage.SavePlayerCharacters(selectedCharacters);
     }
 
-    private Character CloneCharacter(Character character) => new()
+    private static Character CloneCharacter(Character character)
     {
-        Id = character.Id,
-        Name = character.Name,
-        Description = character.Description,
-        CurrentStats = new CurrentStats
+        return new Character
         {
-            TjenesteMotivation = character.CurrentStats.TjenesteMotivation,
-            Stress = character.CurrentStats.Stress,
-            Sociallyst = character.CurrentStats.Sociallyst,
-            Tillid = character.CurrentStats.Tillid
-        },
-        Traits = new CharacterTraits
-        {
-            Strukturbehov = character.Traits.Strukturbehov,
-            SocialtBehov = character.Traits.SocialtBehov,
-            Risikovillighed = character.Traits.Risikovillighed,
-            PresTolerance = character.Traits.PresTolerance,
-            Fysisk = character.Traits.Fysisk,
-            Erfaringsniveau = character.Traits.Erfaringsniveau
-        }
-    };
+            Id = character.Id,
+            Name = character.Name,
+            Description = character.Description,
 
-    private Question CloneQuestion(Question question) => new()
-    {
-        Id = question.Id,
-        Text = question.Text,
-        AnswerOptions = question.AnswerOptions.Select(o => new AnswerOption
-        {
-            Id = o.Id,
-            Text = o.Text,
-            Rules = o.Rules.Select(r => new Rule
+            CurrentStats = new CurrentStats
             {
-                TargetGroup = r.TargetGroup,
-                ConditionStat = r.ConditionStat,
-                Operator = r.Operator,
-                CompareValue = r.CompareValue,
-                EffectStat = r.EffectStat,
-                ChangeValue = r.ChangeValue
-            }).ToList()
-        }).ToList()
-    };
+                TjenesteMotivation = character.CurrentStats.TjenesteMotivation,
+                Stress = character.CurrentStats.Stress,
+                Sociallyst = character.CurrentStats.Sociallyst,
+                Tillid = character.CurrentStats.Tillid
+            },
 
-    private void GoToWaitingArea() => Navigation.NavigateTo("/waiting-area");
+            Traits = new CharacterTraits
+            {
+                Strukturbehov = character.Traits.Strukturbehov,
+                SocialtBehov = character.Traits.SocialtBehov,
+                Risikovillighed = character.Traits.Risikovillighed,
+                PresTolerance = character.Traits.PresTolerance,
+                Fysisk = character.Traits.Fysisk,
+                Erfaringsniveau = character.Traits.Erfaringsniveau
+            }
+        };
+    }
+
+    private static Question CloneQuestion(Question question)
+    {
+        return new Question
+        {
+            Id = question.Id,
+            Text = question.Text,
+
+            AnswerOptions = question.AnswerOptions
+                .Select(option => new AnswerOption
+                {
+                    Id = option.Id,
+                    Text = option.Text,
+
+                    Rules = option.Rules
+                        .Select(rule => new Rule
+                        {
+                            TargetGroup = rule.TargetGroup,
+                            ConditionStat = rule.ConditionStat,
+                            Operator = rule.Operator,
+                            CompareValue = rule.CompareValue,
+                            EffectStat = rule.EffectStat,
+                            ChangeValue = rule.ChangeValue
+                        })
+                        .ToList()
+                })
+                .ToList()
+        };
+    }
+
+    private void GoToWaitingArea()
+    {
+        Navigation.NavigateTo("/waiting-area");
+    }
 
     private void GoHome()
     {
