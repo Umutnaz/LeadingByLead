@@ -1,0 +1,67 @@
+@using Core
+@using Frontend.Services.IService
+@inject ICharacterService CharacterService
+
+@if (Visible)
+{
+    <div class="modal-backdrop">
+        <div class="modal-card">
+            <header class="modal-header">
+                <div>
+                    <span class="modal-kicker">Character</span>
+                    <h4>@(IsEdit ? "Rediger character" : "Opret character")</h4>
+                </div>
+                <button class="close-button" @onclick="Close">×</button>
+            </header>
+
+            <div class="form-grid full">
+                <label>
+                    <span>Navn</span>
+                    <input @bind="Model.Name" placeholder="Character navn" />
+                </label>
+
+                <label>
+                    <span>Beskrivelse</span>
+                    <textarea @bind="Model.Description" placeholder="Kort beskrivelse af characteren"></textarea>
+                </label>
+            </div>
+
+            <h5>Traits</h5>
+            <div class="trait-grid">
+                @NumberField("Strukturbehov", Model.Traits.Strukturbehov, value => Model.Traits.Strukturbehov = value)
+                @NumberField("Socialt behov", Model.Traits.SocialtBehov, value => Model.Traits.SocialtBehov = value)
+                @NumberField("Risikovillighed", Model.Traits.Risikovillighed, value => Model.Traits.Risikovillighed = value)
+                @NumberField("Pres tolerance", Model.Traits.PresTolerance, value => Model.Traits.PresTolerance = value)
+                @NumberField("Fysisk", Model.Traits.Fysisk, value => Model.Traits.Fysisk = value)
+                @NumberField("Erfaringsniveau", Model.Traits.Erfaringsniveau, value => Model.Traits.Erfaringsniveau = value)
+            </div>
+
+            <footer class="modal-actions">
+                <button class="secondary-button" @onclick="Close">Annuller</button>
+                <button class="save-button" @onclick="Save">Gem character</button>
+            </footer>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public Character Model { get; set; } = new();
+
+    private bool IsEdit => !string.IsNullOrEmpty(Model?.Id);
+
+    private async Task Save()
+    {
+        if (IsEdit) await CharacterService.UpdateCharacterAsync(Model.Id!, Model);
+        else await CharacterService.CreateCharacterAsync(Model);
+        await VisibleChanged.InvokeAsync(false);
+    }
+
+    private async Task Close() => await VisibleChanged.InvokeAsync(false);
+
+    private RenderFragment NumberField(string label, int value, Action<int> setValue) => @<label class="trait-field">
+        <span>@label</span>
+        <input type="number" min="0" max="100" value="@value" @onchange="e => setValue(int.TryParse(e.Value?.ToString(), out var n) ? Math.Clamp(n, 0, 100) : 0)" />
+    </label>;
+}

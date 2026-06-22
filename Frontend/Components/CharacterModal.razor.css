@@ -1,0 +1,22 @@
+.modal-backdrop { position: fixed; inset: 0; z-index: 2000; padding: 1rem; overflow-y: auto; background: rgba(20, 8, 45, .72); backdrop-filter: blur(7px); }
+.modal-card { width: min(780px, 100%); margin: 4vh auto; background: white; border-radius: 1.35rem; padding: clamp(1rem, 3vw, 1.5rem); box-shadow: 0 .75rem 0 rgba(0,0,0,.25), 0 1.6rem 3rem rgba(0,0,0,.28); color: #1f1147; }
+.modal-header { display: flex; justify-content: space-between; gap: 1rem; align-items: start; margin-bottom: 1rem; }
+.modal-kicker { color: #46178f; font-weight: 1000; text-transform: uppercase; letter-spacing: .08em; font-size: .8rem; }
+h4 { margin: .15rem 0 0; color: #46178f; font-size: clamp(1.9rem, 5vw, 3rem); font-weight: 1000; line-height: .95; letter-spacing: -.06em; }
+h5 { margin: 1rem 0 .7rem; color: #1f1147; font-weight: 1000; text-transform: uppercase; letter-spacing: .05em; }
+.close-button { width: 2.5rem; height: 2.5rem; border: 0; border-radius: 999px; background: #e21b3c; color: white; font-size: 1.5rem; font-weight: 1000; cursor: pointer; box-shadow: 0 .25rem 0 rgba(0,0,0,.22); }
+.form-grid { display: grid; gap: .85rem; }
+label { display: grid; gap: .35rem; font-weight: 1000; }
+label span { color: #1f1147; }
+input, textarea { width: 100%; border: .18rem solid #ddd3ff; border-radius: .9rem; padding: .8rem .95rem; color: #1f1147; font-weight: 850; outline: none; background: white; }
+textarea { min-height: 6rem; resize: vertical; }
+input:focus, textarea:focus { border-color: #46178f; box-shadow: 0 0 0 .25rem rgba(70,23,143,.15); }
+.trait-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.trait-field { padding: .75rem; border-radius: 1rem; background: #f5f1ff; }
+.trait-field:nth-child(4n+1) { background: #ffe4ea; } .trait-field:nth-child(4n+2) { background: #e7f1ff; } .trait-field:nth-child(4n+3) { background: #fff2cd; } .trait-field:nth-child(4n+4) { background: #e5fbde; }
+.trait-field input { border-color: rgba(70,23,143,.18); }
+.modal-actions { display: flex; justify-content: flex-end; gap: .75rem; margin-top: 1.1rem; }
+.save-button, .secondary-button { border: 0; border-radius: .9rem; padding: .85rem 1.1rem; color: white; font-weight: 1000; cursor: pointer; box-shadow: 0 .35rem 0 rgba(0,0,0,.22); transition: transform .12s ease, filter .12s ease; }
+.save-button { background: #26890c; } .secondary-button { background: #6b5b95; }
+button:hover { transform: translateY(-.14rem); filter: brightness(1.06); }
+@media (max-width: 640px) { .trait-grid { grid-template-columns: 1fr; } .modal-actions { display: grid; } .save-button, .secondary-button { width: 100%; } }

@@ -1,0 +1,207 @@
+@page "/GameViewerHost"
+@using Frontend.Services
+@using Frontend.Services.IService
+@using Core
+@using System.Linq
+@implements IDisposable
+@inject IGameSessionService GameSessionService
+@inject LocalStorageService LocalStorage
+@inject NavigationManager Navigation
+
+<PageTitle>Host Panel - LeadingByLead</PageTitle>
+
+<main class="host-page">
+@if (session == null)
+{
+    <section class="status-card">Henter spildata...</section>
+}
+else if (currentQuestion == null)
+{
+    <section class="finished-card">
+        <span>🎉</span>
+        <h1>Spillet er færdigt</h1>
+        <button @onclick="EndGame">Afslut spil</button>
+    </section>
+}
+else
+{
+    <section class="host-shell">
+        <header class="host-header">
+            <div>
+                <span class="eyebrow">Host live</span>
+                <h1>Spørgsmål @(session.CurrentQuestionIndex + 1) / @session.Questions.Count</h1>
+                <p>@currentQuestion.Text</p>
+            </div>
+            <div class="host-actions">
+                <button class="next-button" @onclick="NextQuestion">Næste spørgsmål</button>
+                <button class="end-button" @onclick="EndGame">Afslut</button>
+            </div>
+        </header>
+
+        <section class="host-grid">
+            <article class="panel answer-panel">
+                <h2>Svarmuligheder</h2>
+                <div class="answer-list">
+                    @foreach (var option in currentQuestion.AnswerOptions.Select((value, index) => new { value, index }))
+                    {
+                        <div class="answer-card answer-@option.index">
+                            <span>@GetAnswerIcon(option.index)</span>
+                            <div>
+                                <strong>@option.value.Text</strong>
+                                <small>@option.value.Rules.Count regler</small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </article>
+
+            <article class="panel scoreboard-panel">
+                <div class="panel-title-row">
+                    <h2>Scoreboard</h2>
+                    <span>@playerStates.Count snapshots</span>
+                </div>
+
+                <div class="score-table">
+                    <div class="score-row head">
+                        <span>Spiller</span><span>Mot.</span><span>Stress</span><span>Social</span><span>Tillid</span><span>Score</span>
+                    </div>
+                    @if (playerStates.Count > 0)
+                    {
+                        @foreach (var ps in playerStates.OrderByDescending(p => CalculateGroupScore(p.Characters.Select(c => new Character { CurrentStats = c.CurrentStats, Name = c.Name }).ToList())))
+                        {
+                            var avgMotivation = ps.Characters.Any() ? ps.Characters.Average(c => c.CurrentStats.TjenesteMotivation) : 0;
+                            var avgStress = ps.Characters.Any() ? ps.Characters.Average(c => c.CurrentStats.Stress) : 0;
+                            var avgSocial = ps.Characters.Any() ? ps.Characters.Average(c => c.CurrentStats.Sociallyst) : 0;
+                            var avgTrust = ps.Characters.Any() ? ps.Characters.Average(c => c.CurrentStats.Tillid) : 0;
+                            var score = ps.Characters.Any() ? CalculateGroupScore(ps.Characters.Select(c => new Character { CurrentStats = c.CurrentStats, Name = c.Name }).ToList()) : 0;
+
+                            <div class="score-row">
+                                <span class="player-name">@ps.Name</span>
+                                <span>@avgMotivation.ToString("F0")</span>
+                                <span>@avgStress.ToString("F0")</span>
+                                <span>@avgSocial.ToString("F0")</span>
+                                <span>@avgTrust.ToString("F0")</span>
+                                <strong>@score.ToString("F0")</strong>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        @foreach (var player in session.Players)
+                        {
+                            <div class="score-row empty">
+                                <span class="player-name">@player.Name</span>
+                                <span>-</span><span>-</span><span>-</span><span>-</span><strong>-</strong>
+                            </div>
+                        }
+                    }
+                </div>
+            </article>
+        </section>
+
+        <section class="panel character-panel">
+            <h2>Session characters</h2>
+            <div class="character-grid">
+                @foreach (var character in session.Characters)
+                {
+                    <div class="character-card">
+                        <h3>@character.Name</h3>
+                        <div class="mini-stats">
+                            <span>Motivation <strong>@character.CurrentStats.TjenesteMotivation</strong></span>
+                            <span>Stress <strong>@character.CurrentStats.Stress</strong></span>
+                            <span>Sociallyst <strong>@character.CurrentStats.Sociallyst</strong></span>
+                            <span>Tillid <strong>@character.CurrentStats.Tillid</strong></span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+    </section>
+}
+</main>
+
+@code {
+    private GameSession? session;
+    private Question? currentQuestion;
+    private System.Threading.Timer? pollTimer;
+    private List<PlayerState> playerStates = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (LocalStorage.GetPlayerRole() != "Host")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(LocalStorage.GetCurrentSessionId()))
+        {
+            Navigation.NavigateTo("/gameeditor");
+            return;
+        }
+
+        await RefreshSession();
+
+        pollTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await RefreshSession();
+                StateHasChanged();
+            });
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+    }
+
+    private async Task RefreshSession()
+    {
+        var sessionId = LocalStorage.GetCurrentSessionId();
+        session = await GameSessionService.GetSessionAsync(sessionId);
+
+        if (session == null) return;
+
+        currentQuestion = session.CurrentQuestionIndex < session.Questions.Count
+            ? session.Questions[session.CurrentQuestionIndex]
+            : null;
+
+        playerStates = await GameSessionService.GetPlayerStatesAsync(sessionId);
+    }
+
+    private async Task NextQuestion()
+    {
+        await GameSessionService.AdvanceQuestionAsync(LocalStorage.GetCurrentSessionId());
+        await RefreshSession();
+    }
+
+    private async Task EndGame()
+    {
+        var sessionId = LocalStorage.GetCurrentSessionId();
+        await GameSessionService.FinishSessionAsync(sessionId);
+        await GameSessionService.DeleteSessionAsync(sessionId);
+        LocalStorage.ClearAll();
+        Navigation.NavigateTo("/");
+    }
+
+    private double CalculateGroupScore(List<Character> characters)
+    {
+        if (characters.Count == 0) return 0;
+        var motivation = characters.Average(c => c.CurrentStats.TjenesteMotivation);
+        var stress = 100 - characters.Average(c => c.CurrentStats.Stress);
+        var social = characters.Average(c => c.CurrentStats.Sociallyst);
+        var trust = characters.Average(c => c.CurrentStats.Tillid);
+        return (motivation + stress + social + trust) / 4;
+    }
+
+    private string GetAnswerIcon(int index) => index switch
+    {
+        0 => "▲",
+        1 => "◆",
+        2 => "●",
+        3 => "■",
+        _ => "★"
+    };
+
+    public void Dispose()
+    {
+        pollTimer?.Dispose();
+    }
+}

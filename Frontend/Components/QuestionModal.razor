@@ -1,0 +1,84 @@
+@using Core
+@using Frontend.Services.IService
+@inject IQuestionsService QuestionService
+
+@if (Visible)
+{
+    <div class="modal-backdrop">
+        <div class="modal-card large">
+            <header class="modal-header">
+                <div>
+                    <span class="modal-kicker">Spørgsmål</span>
+                    <h4>@(IsEdit ? "Rediger spørgsmål" : "Opret spørgsmål")</h4>
+                </div>
+                <button class="close-button" @onclick="Close">×</button>
+            </header>
+
+            <label class="question-field">
+                <span>Spørgsmålstekst</span>
+                <textarea @bind="Model.Text" placeholder="Skriv dit scenarie/spørgsmål her"></textarea>
+            </label>
+
+            <section class="options-section">
+                <div class="section-title">
+                    <h5>Svarmuligheder</h5>
+                    <button class="add-button" @onclick="AddOption">+ Tilføj svar</button>
+                </div>
+
+                @if (Model.AnswerOptions.Count == 0)
+                {
+                    <div class="empty-options">Ingen svarmuligheder endnu.</div>
+                }
+                else
+                {
+                    <div class="option-list">
+                        @foreach (var option in Model.AnswerOptions.Select((value, index) => new { value, index }))
+                        {
+                            <article class="option-card option-@option.index">
+                                <span class="shape">@GetAnswerIcon(option.index)</span>
+                                <input @bind="option.value.Text" />
+                                <small>@option.value.Rules.Count regler</small>
+                                <button class="delete-button" @onclick="() => RemoveOption(option.value.Id)">Slet</button>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+
+            <footer class="modal-actions">
+                <button class="secondary-button" @onclick="Close">Annuller</button>
+                <button class="save-button" @onclick="Save">Gem spørgsmål</button>
+            </footer>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public Question Model { get; set; } = new();
+
+    private bool IsEdit => !string.IsNullOrEmpty(Model?.Id);
+
+    private void AddOption() => Model.AnswerOptions.Add(new AnswerOption { Text = "Ny svarmulighed" });
+
+    private void RemoveOption(string id) => Model.AnswerOptions.RemoveAll(a => a.Id == id);
+
+    private async Task Save()
+    {
+        if (IsEdit) await QuestionService.UpdateQuestionAsync(Model.Id!, Model);
+        else await QuestionService.CreateQuestionAsync(Model);
+        await VisibleChanged.InvokeAsync(false);
+    }
+
+    private async Task Close() => await VisibleChanged.InvokeAsync(false);
+
+    private string GetAnswerIcon(int index) => index switch
+    {
+        0 => "▲",
+        1 => "◆",
+        2 => "●",
+        3 => "■",
+        _ => "★"
+    };
+}

@@ -1,0 +1,396 @@
+@page "/gameviewer"
+@using Frontend.Services
+@using Frontend.Services.IService
+@using Core
+@implements IDisposable
+@inject IGameSessionService GameSessionService
+@inject LocalStorageService LocalStorage
+@inject NavigationManager Navigation
+
+<PageTitle>Spil - LeadingByLead</PageTitle>
+
+<main class="game-page">
+@if (session == null)
+{
+    <section class="status-card warning">Henter spildata...</section>
+}
+else if (session.State != GameState.Running)
+{
+    <section class="status-card info">Spillet er ikke startet endnu. Vent på hosten.</section>
+}
+else if (currentQuestion == null)
+{
+    <section class="finished-card">
+        <span>🎉</span>
+        <h1>Spillet er færdigt</h1>
+        <p>Dit gruppegennemsnit</p>
+        <strong>@FormatNumber(CalculateGroupAverage())</strong>
+        <button @onclick="GoHome">Gå hjem</button>
+    </section>
+}
+else
+{
+    <section class="game-layout">
+        <article class="question-card">
+            <div class="question-topline">
+                <span>Spørgsmål @(session.CurrentQuestionIndex + 1) / @session.Questions.Count</span>
+                @if (hasAnswered)
+                {
+                    <span class="answered-badge">Svar sendt</span>
+                }
+            </div>
+
+            <h1>@currentQuestion.Text</h1>
+
+            <div class="answer-grid">
+                @for (var i = 0; i < currentQuestion.AnswerOptions.Count; i++)
+                {
+                    var index = i;
+                    var answer = currentQuestion.AnswerOptions[index];
+
+                    <button class="answer-button answer-@index" @onclick="() => ChooseAnswer(answer)" disabled="@hasAnswered">
+                        <span class="answer-shape">@GetAnswerIcon(index)</span>
+                        <span>@answer.Text</span>
+                    </button>
+                }
+            </div>
+
+            @if (hasAnswered)
+            {
+                <div class="wait-banner">Svar indsendt. Vent på næste spørgsmål...</div>
+            }
+        </article>
+
+        <aside class="stats-panel">
+            <header>
+                <span>Din gruppe</span>
+                <strong>@FormatNumber(CalculateGroupAverage())</strong>
+            </header>
+
+            @if (playerCharacters == null || playerCharacters.Count == 0)
+            {
+                <div class="empty-state">Ingen characters fundet.</div>
+            }
+            else
+            {
+                <div class="stat-list">
+                    @StatBar("Motivation", GetAverageStat(c => c.CurrentStats.TjenesteMotivation), "motivation")
+                    @StatBar("Stress", GetAverageStat(c => c.CurrentStats.Stress), "stress")
+                    @StatBar("Sociallyst", GetAverageStat(c => c.CurrentStats.Sociallyst), "social")
+                    @StatBar("Tillid", GetAverageStat(c => c.CurrentStats.Tillid), "trust")
+                </div>
+
+                <div class="mini-characters">
+                    @foreach (var character in playerCharacters)
+                    {
+                        <div>
+                            <strong>@character.Name</strong>
+                            <span>@FormatNumber(CalculateCharacterAverage(character))</span>
+                        </div>
+                    }
+                </div>
+            }
+        </aside>
+    </section>
+}
+</main>
+
+@code {
+    private GameSession? session;
+    private Question? currentQuestion;
+    private List<Character> playerCharacters = new();
+    private bool hasAnswered;
+    private int lastQuestionIndex = -1;
+    private System.Threading.Timer? pollTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (LocalStorage.GetPlayerRole() != "Player")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(LocalStorage.GetCurrentSessionId()))
+        {
+            Navigation.NavigateTo("/waiting-area");
+            return;
+        }
+
+        playerCharacters = LocalStorage.GetPlayerCharacters();
+        await RefreshSession();
+
+        pollTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await RefreshSession();
+                StateHasChanged();
+            });
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+    }
+
+    private async Task RefreshSession()
+    {
+        var sessionId = LocalStorage.GetCurrentSessionId();
+        session = await GameSessionService.GetSessionAsync(sessionId);
+
+        if (session == null) return;
+
+        if (session.State == GameState.Finished)
+        {
+            currentQuestion = null;
+            return;
+        }
+
+        if (session.State == GameState.Running && session.CurrentQuestionIndex < session.Questions.Count)
+        {
+            currentQuestion = session.Questions[session.CurrentQuestionIndex];
+
+            if (lastQuestionIndex != session.CurrentQuestionIndex)
+            {
+                var answered = LocalStorage.GetAnsweredQuestions();
+                hasAnswered = answered.TryGetValue(currentQuestion.Id, out _);
+
+                lastQuestionIndex = session.CurrentQuestionIndex;
+                LocalStorage.SetCurrentQuestionIndex(session.CurrentQuestionIndex);
+            }
+        }
+        else if (session.State == GameState.Running)
+        {
+            currentQuestion = null;
+        }
+    }
+
+    private async Task ChooseAnswer(AnswerOption option)
+    {
+        if (hasAnswered || currentQuestion == null) return;
+
+        hasAnswered = true;
+
+        ApplyRulesToCharacters(playerCharacters, option);
+        LocalStorage.SavePlayerCharacters(playerCharacters);
+        LocalStorage.AddAnsweredQuestion(currentQuestion.Id, option.Id);
+
+        try
+        {
+            var playerState = new PlayerState
+            {
+                PlayerId = LocalStorage.GetPlayerId(),
+                Name = LocalStorage.GetPlayerName(),
+                CurrentQuestionIndex = LocalStorage.GetCurrentQuestionIndex(),
+                Characters = BuildCharacterSnapshots(),
+                Answers = BuildAnswerRecords()
+            };
+
+            await GameSessionService.PostPlayerStateAsync(LocalStorage.GetCurrentSessionId(), playerState);
+        }
+        catch
+        {
+        }
+
+        await RefreshSession();
+    }
+
+    private List<CharacterSnapshot> BuildCharacterSnapshots()
+    {
+        var result = new List<CharacterSnapshot>();
+
+        foreach (var character in playerCharacters)
+        {
+            result.Add(new CharacterSnapshot
+            {
+                CharacterId = character.Id,
+                Name = character.Name,
+                CurrentStats = character.CurrentStats
+            });
+        }
+
+        return result;
+    }
+
+    private List<AnswerRecord> BuildAnswerRecords()
+    {
+        var result = new List<AnswerRecord>();
+        var answers = LocalStorage.GetAnsweredQuestions();
+
+        foreach (var answer in answers)
+        {
+            result.Add(new AnswerRecord
+            {
+                QuestionId = answer.Key,
+                AnswerId = answer.Value
+            });
+        }
+
+        return result;
+    }
+
+    private void ApplyRulesToCharacters(List<Character> characters, AnswerOption option)
+    {
+        foreach (var character in characters)
+        {
+            foreach (var rule in option.Rules)
+            {
+                var left = GetStatValue(character, rule.TargetGroup, rule.ConditionStat);
+
+                var condition = rule.Operator switch
+                {
+                    RuleOperator.LessThan => left < rule.CompareValue,
+                    RuleOperator.GreaterThan => left > rule.CompareValue,
+                    RuleOperator.Equal => left == rule.CompareValue,
+                    _ => false
+                };
+
+                if (!condition) continue;
+
+                var updated = Clamp(GetCurrentStat(character, rule.EffectStat) + rule.ChangeValue);
+                SetCurrentStat(character, rule.EffectStat, updated);
+            }
+        }
+    }
+
+    private int GetStatValue(Character character, StatGroup group, string statName)
+    {
+        if (group == StatGroup.CurrentStats)
+        {
+            return GetCurrentStat(character, statName);
+        }
+
+        return statName switch
+        {
+            nameof(CharacterTraits.Strukturbehov) => character.Traits.Strukturbehov,
+            nameof(CharacterTraits.SocialtBehov) => character.Traits.SocialtBehov,
+            nameof(CharacterTraits.Risikovillighed) => character.Traits.Risikovillighed,
+            nameof(CharacterTraits.PresTolerance) => character.Traits.PresTolerance,
+            nameof(CharacterTraits.Fysisk) => character.Traits.Fysisk,
+            nameof(CharacterTraits.Erfaringsniveau) => character.Traits.Erfaringsniveau,
+            _ => 0
+        };
+    }
+
+    private int GetCurrentStat(Character character, string statName)
+    {
+        return statName switch
+        {
+            nameof(CurrentStats.TjenesteMotivation) => character.CurrentStats.TjenesteMotivation,
+            nameof(CurrentStats.Stress) => character.CurrentStats.Stress,
+            nameof(CurrentStats.Sociallyst) => character.CurrentStats.Sociallyst,
+            nameof(CurrentStats.Tillid) => character.CurrentStats.Tillid,
+            _ => 0
+        };
+    }
+
+    private void SetCurrentStat(Character character, string statName, int value)
+    {
+        switch (statName)
+        {
+            case nameof(CurrentStats.TjenesteMotivation):
+                character.CurrentStats.TjenesteMotivation = value;
+                break;
+
+            case nameof(CurrentStats.Stress):
+                character.CurrentStats.Stress = value;
+                break;
+
+            case nameof(CurrentStats.Sociallyst):
+                character.CurrentStats.Sociallyst = value;
+                break;
+
+            case nameof(CurrentStats.Tillid):
+                character.CurrentStats.Tillid = value;
+                break;
+        }
+    }
+
+    private double GetAverageStat(Func<Character, int> statSelector)
+    {
+        if (playerCharacters.Count == 0) return 0;
+
+        double total = 0;
+
+        foreach (var character in playerCharacters)
+        {
+            total += statSelector(character);
+        }
+
+        return total / playerCharacters.Count;
+    }
+
+    private double CalculateGroupAverage()
+    {
+        if (playerCharacters.Count == 0) return 0;
+
+        var motivation = GetAverageStat(c => c.CurrentStats.TjenesteMotivation);
+        var stress = 100 - GetAverageStat(c => c.CurrentStats.Stress);
+        var social = GetAverageStat(c => c.CurrentStats.Sociallyst);
+        var trust = GetAverageStat(c => c.CurrentStats.Tillid);
+
+        return (motivation + stress + social + trust) / 4;
+    }
+
+    private double CalculateCharacterAverage(Character character)
+    {
+        return (
+            character.CurrentStats.TjenesteMotivation +
+            (100 - character.CurrentStats.Stress) +
+            character.CurrentStats.Sociallyst +
+            character.CurrentStats.Tillid
+        ) / 4.0;
+    }
+
+    private RenderFragment StatBar(string label, double value, string className)
+    {
+        return @<div class="stat-row @className">
+            <div>
+                <span>@label</span>
+                <strong>@FormatNumber(value)</strong>
+            </div>
+            <div class="meter">
+                <span style="width: @(FormatNumber(ClampDouble(value)))%"></span>
+            </div>
+        </div>;
+    }
+
+    private string GetAnswerIcon(int index)
+    {
+        return index switch
+        {
+            0 => "▲",
+            1 => "◆",
+            2 => "●",
+            3 => "■",
+            _ => "★"
+        };
+    }
+
+    private int Clamp(int value)
+    {
+        if (value < 0) return 0;
+        if (value > 100) return 100;
+        return value;
+    }
+
+    private double ClampDouble(double value)
+    {
+        if (value < 0) return 0;
+        if (value > 100) return 100;
+        return value;
+    }
+
+    private string FormatNumber(double value)
+    {
+        return ((int)(value + 0.5)).ToString();
+    }
+
+    private void GoHome()
+    {
+        LocalStorage.ClearSessionData();
+        Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        pollTimer?.Dispose();
+    }
+}

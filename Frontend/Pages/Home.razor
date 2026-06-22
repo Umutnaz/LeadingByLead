@@ -1,0 +1,42 @@
+@page "/"
+@using Frontend.Services
+@inject NavigationManager Navigation
+@inject LocalStorageService LocalStorage
+
+<PageTitle>LeadingByLead - Hjem</PageTitle>
+
+<main class="home-page">
+    <section class="home-shell">
+        <div class="brand-pill">Fører spillet</div>
+        <h1>Vælg din rolle</h1>
+        <p class="home-subtitle">Et Kahoot-inspireret ledelsesspil, hvor valg påvirker gruppens motivation, stress, sociallyst og tillid.</p>
+
+        <div class="role-grid">
+            <button class="role-card host-card" @onclick="SelectHost">
+                <span class="role-icon">🎮</span>
+                <span class="role-title">Host</span>
+                <span class="role-text">Opret spørgsmål, characters og start spillet.</span>
+            </button>
+
+            <button class="role-card player-card" @onclick="SelectPlayer">
+                <span class="role-icon">👥</span>
+                <span class="role-title">Player</span>
+                <span class="role-text">Deltag med session ID og svar på scenarier.</span>
+            </button>
+        </div>
+    </section>
+</main>
+
+@code {
+    private void SelectHost()
+    {
+        LocalStorage.SetPlayerRole("Host");
+        Navigation.NavigateTo("/gameeditor");
+    }
+
+    private void SelectPlayer()
+    {
+        LocalStorage.SetPlayerRole("Player");
+        Navigation.NavigateTo("/waiting-area");
+    }
+}

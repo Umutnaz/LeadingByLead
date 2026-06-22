@@ -1,0 +1,217 @@
+/* Kahoot-inspired global styles */
+:root {
+    --kb-primary: #6a00f4;
+    --kb-secondary: #ff5983;
+    --kb-accent-yellow: #ffd740;
+    --kb-accent-blue: #00d4ff;
+    --kb-accent-green: #2ec94f;
+    --kb-accent-orange: #ff6b35;
+    --kb-dark: #1a1a2e;
+    --kb-light: #f5f7fb;
+    --kb-border-radius: 12px;
+    --kb-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --kb-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+.kb-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--kb-light);
+    color: var(--kb-dark);
+}
+
+.kb-header {
+    background: linear-gradient(90deg, var(--kb-primary) 0%, var(--kb-secondary) 100%);
+    color: white;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    box-shadow: var(--kb-shadow);
+}
+
+.kb-brand {
+    font-weight: 800;
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+.kb-main {
+    flex: 1;
+    padding: 3rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Kahoot utility classes */
+.kb-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+}
+
+.kb-container {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.kb-title {
+    font-size: 3rem;
+    font-weight: 800;
+    margin: 0 0 1.5rem 0;
+    color: var(--kb-dark);
+    letter-spacing: 1px;
+}
+
+.kb-subtitle {
+    font-size: 1.25rem;
+    color: #666;
+    margin: 0 0 2rem 0;
+    line-height: 1.5;
+}
+
+/* Button styles - Kahoot flavor */
+.kb-btn {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: var(--kb-border-radius);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--kb-shadow);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kb-btn:hover {
+    box-shadow: var(--kb-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.kb-btn-primary {
+    background: linear-gradient(135deg, var(--kb-primary), var(--kb-secondary));
+    color: white;
+}
+
+.kb-btn-primary:hover {
+    filter: brightness(1.1);
+}
+
+.kb-btn-lg {
+    padding: 1.5rem 3rem;
+    font-size: 1.3rem;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kb-btn-answer {
+    padding: 2rem 1rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    border-radius: var(--kb-border-radius);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--kb-shadow);
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: none;
+    color: white;
+}
+
+.kb-btn-answer:hover {
+    box-shadow: var(--kb-shadow-hover);
+    transform: scale(1.05);
+}
+
+.kb-btn-yellow { background: var(--kb-accent-yellow); color: var(--kb-dark); }
+.kb-btn-blue { background: var(--kb-accent-blue); color: white; }
+.kb-btn-green { background: var(--kb-accent-green); color: white; }
+.kb-btn-orange { background: var(--kb-accent-orange); color: white; }
+
+/* Card styles */
+.kb-card {
+    background: white;
+    border-radius: var(--kb-border-radius);
+    padding: 2rem;
+    box-shadow: var(--kb-shadow);
+    transition: all 0.3s ease;
+}
+
+.kb-card:hover {
+    box-shadow: var(--kb-shadow-hover);
+    transform: translateY(-4px);
+}
+
+.kb-card-header {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--kb-primary);
+}
+
+.kb-card-body {
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+/* Grid layouts */
+.kb-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.kb-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .kb-main {
+        padding: 1.5rem;
+    }
+
+    .kb-title {
+        font-size: 2rem;
+    }
+
+    .kb-grid-2,
+    .kb-grid-4 {
+        grid-template-columns: 1fr;
+    }
+
+    .kb-btn-lg {
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+        min-height: 60px;
+    }
+
+    .kb-btn-answer {
+        min-height: 100px;
+        padding: 1rem;
+        font-size: 1rem;
+    }
+}
