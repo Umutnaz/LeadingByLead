@@ -1,8 +1,6 @@
 using Core;
 using Backend.Repositories;
 using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Backend.Services;
 
@@ -11,101 +9,236 @@ public static class SeedData
     public static async Task SeedAsync(IServiceProvider services)
     {
         using var scope = services.CreateScope();
-        var charRepo = scope.ServiceProvider.GetRequiredService<ICharacterRepository>();
-        var qRepo = scope.ServiceProvider.GetRequiredService<IQuestionRepository>();
 
-        var existingChars = await charRepo.GetAllAsync();
-        if (existingChars == null || existingChars.Count == 0)
+        var characterRepository =
+            scope.ServiceProvider.GetRequiredService<ICharacterRepository>();
+
+        var questionRepository =
+            scope.ServiceProvider.GetRequiredService<IQuestionRepository>();
+
+        var characters = await characterRepository.GetAllAsync();
+
+        if (characters.Count == 0)
         {
-            var seeds = new List<Character>
-            {
-                new Character
-                {
-                    Name = "Sergent Jensen",
-                    Description = "Erfaren og rolig leder. Forudsigelig og solid under pres.",
-                    Traits = new CharacterTraits { Strukturbehov = 70, SocialtBehov = 50, Risikovillighed = 30, PresTolerance = 80, Fysisk = 60, Erfaringsniveau = 80 },
-                    CurrentStats = new CurrentStats()
-                },
-                new Character
-                {
-                    Name = "Korporal Hansen",
-                    Description = "Ung og energisk, søger socialt samspil. Klarer fysisk pres godt.",
-                    Traits = new CharacterTraits { Strukturbehov = 40, SocialtBehov = 80, Risikovillighed = 50, PresTolerance = 60, Fysisk = 85, Erfaringsniveau = 40 },
-                    CurrentStats = new CurrentStats()
-                },
-                new Character
-                {
-                    Name = "Specialist Larsen",
-                    Description = "Teknisk dygtig, men lavt socialt behov. Kan blive stresset af uklare instrukser.",
-                    Traits = new CharacterTraits { Strukturbehov = 80, SocialtBehov = 20, Risikovillighed = 30, PresTolerance = 70, Fysisk = 50, Erfaringsniveau = 70 },
-                    CurrentStats = new CurrentStats()
-                }
-            };
+            characters = CreateCharacters();
 
-            foreach (var c in seeds)
+            foreach (var character in characters)
             {
-                await charRepo.CreateAsync(c);
+                character.ResetCurrentStats();
+                await characterRepository.CreateAsync(character);
             }
         }
 
-        var existingQuestions = await qRepo.GetAllAsync();
-        if (existingQuestions == null || existingQuestions.Count == 0)
+        var questions = await questionRepository.GetAllAsync();
+
+        if (questions.Count == 0)
         {
-            var q1 = new Question
-            {
-                Text = "Gruppen har været på øvelse i mange timer. Flere virker trætte, men missionen er ikke færdig. Hvad gør du?",
-                AnswerOptions = new List<AnswerOption>
-                {
-                    new AnswerOption
-                    {
-                        Text = "Giv gruppen en kort pause",
-                        Rules = new List<Rule>
-                        {
-                            new Rule { TargetGroup = StatGroup.Traits, ConditionStat = nameof(CharacterTraits.Fysisk), Operator = RuleOperator.LessThan, CompareValue = 50, EffectStat = nameof(CurrentStats.Stress), ChangeValue = -20 },
-                            new Rule { TargetGroup = StatGroup.Traits, ConditionStat = nameof(CharacterTraits.PresTolerance), Operator = RuleOperator.LessThan, CompareValue = 50, EffectStat = nameof(CurrentStats.TjenesteMotivation), ChangeValue = +5 }
-                        }
-                    },
-                    new AnswerOption
-                    {
-                        Text = "Pres gruppen videre",
-                        Rules = new List<Rule>
-                        {
-                            new Rule { TargetGroup = StatGroup.Traits, ConditionStat = nameof(CharacterTraits.PresTolerance), Operator = RuleOperator.GreaterThan, CompareValue = 70, EffectStat = nameof(CurrentStats.TjenesteMotivation), ChangeValue = +10 },
-                            new Rule { TargetGroup = StatGroup.Traits, ConditionStat = nameof(CharacterTraits.Fysisk), Operator = RuleOperator.LessThan, CompareValue = 50, EffectStat = nameof(CurrentStats.Stress), ChangeValue = +25 }
-                        }
-                    }
-                }
-            };
+            var seededQuestions = CreateQuestions(characters);
 
-            var q2 = new Question
-            {
-                Text = "Du får rapport om en mulig farezone. Hvordan håndterer du det?",
-                AnswerOptions = new List<AnswerOption>
-                {
-                    new AnswerOption
-                    {
-                        Text = "Giv klare instrukser og hold formation",
-                        Rules = new List<Rule>
-                        {
-                            new Rule { TargetGroup = StatGroup.Traits, ConditionStat = nameof(CharacterTraits.Strukturbehov), Operator = RuleOperator.GreaterThan, CompareValue = 60, EffectStat = nameof(CurrentStats.Tillid), ChangeValue = +10 },
-                            new Rule { TargetGroup = StatGroup.Traits, ConditionStat = nameof(CharacterTraits.Risikovillighed), Operator = RuleOperator.LessThan, CompareValue = 40, EffectStat = nameof(CurrentStats.Stress), ChangeValue = -10 }
-                        }
-                    },
-                    new AnswerOption
-                    {
-                        Text = "Del gruppen op og send spejdere",
-                        Rules = new List<Rule>
-                        {
-                            new Rule { TargetGroup = StatGroup.Traits, ConditionStat = nameof(CharacterTraits.Erfaringsniveau), Operator = RuleOperator.GreaterThan, CompareValue = 60, EffectStat = nameof(CurrentStats.Tillid), ChangeValue = +5 },
-                            new Rule { TargetGroup = StatGroup.Traits, ConditionStat = nameof(CharacterTraits.SocialtBehov), Operator = RuleOperator.LessThan, CompareValue = 40, EffectStat = nameof(CurrentStats.Sociallyst), ChangeValue = -10 }
-                        }
-                    }
-                }
-            };
-
-            await qRepo.CreateAsync(q1);
-            await qRepo.CreateAsync(q2);
+            foreach (var question in seededQuestions)
+                await questionRepository.CreateAsync(question);
         }
     }
-}
 
+    private static List<Character> CreateCharacters()
+    {
+        return new List<Character>
+        {
+            new()
+            {
+                Name = "Sergent Jensen",
+                Description =
+                    "Erfaren og rolig leder, som normalt står stærkt under pres.",
+
+                BaseStats = new BaseStats
+                {
+                    TjenesteMotivation = 85,
+                    Stress = 25,
+                    Sociallyst = 55,
+                    Tillid = 80
+                }
+            },
+
+            new()
+            {
+                Name = "Korporal Hansen",
+                Description =
+                    "Ung og energisk soldat, som søger fællesskab og handling.",
+
+                BaseStats = new BaseStats
+                {
+                    TjenesteMotivation = 90,
+                    Stress = 45,
+                    Sociallyst = 85,
+                    Tillid = 60
+                }
+            },
+
+            new()
+            {
+                Name = "Specialist Larsen",
+                Description =
+                    "Teknisk dygtig specialist, som fungerer bedst med tydelige rammer.",
+
+                BaseStats = new BaseStats
+                {
+                    TjenesteMotivation = 75,
+                    Stress = 55,
+                    Sociallyst = 30,
+                    Tillid = 70
+                }
+            }
+        };
+    }
+
+    private static List<Question> CreateQuestions(
+        List<Character> characters)
+    {
+        var jensen = characters.First(
+            character => character.Name == "Sergent Jensen");
+
+        var hansen = characters.First(
+            character => character.Name == "Korporal Hansen");
+
+        var larsen = characters.First(
+            character => character.Name == "Specialist Larsen");
+
+        return new List<Question>
+        {
+            new()
+            {
+                Text =
+                    "Gruppen har været på øvelse i mange timer. Flere virker trætte, men missionen er ikke færdig. Hvad gør du?",
+
+                AnswerOptions = new List<AnswerOption>
+                {
+                    new()
+                    {
+                        Text = "Giv gruppen en kort pause",
+
+                        CharacterEffects = new List<CharacterEffect>
+                        {
+                            Effect(
+                                jensen,
+                                Change(nameof(CurrentStats.Stress), -10),
+                                Change(nameof(CurrentStats.Tillid), 5)),
+
+                            Effect(
+                                hansen,
+                                Change(nameof(CurrentStats.Stress), -20),
+                                Change(nameof(CurrentStats.Sociallyst), 10),
+                                Change(nameof(CurrentStats.TjenesteMotivation), 5)),
+
+                            Effect(
+                                larsen,
+                                Change(nameof(CurrentStats.Stress), -25),
+                                Change(nameof(CurrentStats.Tillid), 10))
+                        }
+                    },
+
+                    new()
+                    {
+                        Text = "Pres gruppen videre",
+
+                        CharacterEffects = new List<CharacterEffect>
+                        {
+                            Effect(
+                                jensen,
+                                Change(nameof(CurrentStats.TjenesteMotivation), 5),
+                                Change(nameof(CurrentStats.Stress), 10)),
+
+                            Effect(
+                                hansen,
+                                Change(nameof(CurrentStats.TjenesteMotivation), 10),
+                                Change(nameof(CurrentStats.Stress), 20)),
+
+                            Effect(
+                                larsen,
+                                Change(nameof(CurrentStats.Stress), 30),
+                                Change(nameof(CurrentStats.Tillid), -10),
+                                Change(nameof(CurrentStats.TjenesteMotivation), -15))
+                        }
+                    }
+                }
+            },
+
+            new()
+            {
+                Text =
+                    "Du får rapport om en mulig farezone. Hvordan håndterer du situationen?",
+
+                AnswerOptions = new List<AnswerOption>
+                {
+                    new()
+                    {
+                        Text = "Giv klare instrukser og hold formation",
+
+                        CharacterEffects = new List<CharacterEffect>
+                        {
+                            Effect(
+                                jensen,
+                                Change(nameof(CurrentStats.Tillid), 10),
+                                Change(nameof(CurrentStats.Stress), -5)),
+
+                            Effect(
+                                hansen,
+                                Change(nameof(CurrentStats.Tillid), 5),
+                                Change(nameof(CurrentStats.Sociallyst), -5)),
+
+                            Effect(
+                                larsen,
+                                Change(nameof(CurrentStats.Tillid), 15),
+                                Change(nameof(CurrentStats.Stress), -15))
+                        }
+                    },
+
+                    new()
+                    {
+                        Text = "Del gruppen op og send spejdere",
+
+                        CharacterEffects = new List<CharacterEffect>
+                        {
+                            Effect(
+                                jensen,
+                                Change(nameof(CurrentStats.Tillid), 5),
+                                Change(nameof(CurrentStats.Stress), 5)),
+
+                            Effect(
+                                hansen,
+                                Change(nameof(CurrentStats.TjenesteMotivation), 15),
+                                Change(nameof(CurrentStats.Stress), 10)),
+
+                            Effect(
+                                larsen,
+                                Change(nameof(CurrentStats.Stress), 20),
+                                Change(nameof(CurrentStats.Tillid), -10),
+                                Change(nameof(CurrentStats.Sociallyst), -10))
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    private static CharacterEffect Effect(
+        Character character,
+        params StatChange[] changes)
+    {
+        return new CharacterEffect
+        {
+            CharacterId = character.Id,
+            Changes = changes.ToList()
+        };
+    }
+
+    private static StatChange Change(
+        string statName,
+        int amount)
+    {
+        return new StatChange
+        {
+            StatName = statName,
+            Amount = Math.Clamp(amount, -100, 100)
+        };
+    }
+}

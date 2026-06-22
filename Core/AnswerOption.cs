@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Core;
+﻿namespace Core;
 
 public class AnswerOption
 {
@@ -8,5 +6,5 @@ public class AnswerOption
 
     public string Text { get; set; } = "";
 
-    public List<Rule> Rules { get; set; } = new();
+    public List<CharacterEffect> CharacterEffects { get; set; } = new();
 }

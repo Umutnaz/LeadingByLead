@@ -1,48 +1,34 @@
-using Backend.Repositories;
 using Core;
-using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
+using MongoDB.Driver;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace Backend.Controllers;
+namespace Backend.Repositories;
 
-[ApiController]
-[Route("api/v1/[controller]")]
-public class CharactersController : ControllerBase
+public class CharacterRepository : ICharacterRepository
 {
-    private readonly ICharacterRepository _repo;
-    public CharactersController(ICharacterRepository repo) => _repo = repo;
+    private readonly IMongoCollection<Character> _collection;
 
-    [HttpGet]
-    public async Task<List<Character>> Get() => await _repo.GetAllAsync();
-
-    [HttpGet("{id}")]
-    public async Task<ActionResult<Character>> Get(string id)
+    public CharacterRepository(IMongoDatabase database)
     {
-        var c = await _repo.GetAsync(id);
-        if (c == null) return NotFound();
-        return c;
+        _collection = database.GetCollection<Character>("Characters");
     }
 
-    [HttpPost]
-    public async Task<ActionResult<Character>> Create([FromBody] Character character)
+    public async Task<List<Character>> GetAllAsync() =>
+        await _collection.Find(_ => true).ToListAsync();
+
+    public async Task<Character?> GetAsync(string id) =>
+        await _collection.Find(c => c.Id == id).FirstOrDefaultAsync();
+
+    public async Task<Character> CreateAsync(Character character)
     {
-        var created = await _repo.CreateAsync(character);
-        return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
+        await _collection.InsertOneAsync(character);
+        return character;
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(string id, [FromBody] Character character)
-    {
-        await _repo.UpdateAsync(id, character);
-        return NoContent();
-    }
+    public async Task UpdateAsync(string id, Character character) =>
+        await _collection.ReplaceOneAsync(c => c.Id == id, character);
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id)
-    {
-        await _repo.DeleteAsync(id);
-        return NoContent();
-    }
+    public async Task DeleteAsync(string id) =>
+        await _collection.DeleteOneAsync(c => c.Id == id);
 }
-

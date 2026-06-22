@@ -1,77 +1,64 @@
 using Core;
-using System;
-using System.Collections.Generic;
 
 namespace Backend.Services;
 
 public static class RuleEvaluator
 {
-    public static void ApplyAnswerOptionToCharacters(List<Character> characters, AnswerOption option)
+    public static void ApplyAnswerOptionToCharacters(
+        List<Character> characters,
+        AnswerOption option)
     {
-        if (option?.Rules == null) return;
-
-        foreach (var ch in characters)
+        foreach (var effect in option.CharacterEffects)
         {
-            foreach (var rule in option.Rules)
-            {
-                int left = GetStatValue(ch, rule.TargetGroup, rule.ConditionStat);
-                bool condition = rule.Operator switch
-                {
-                    RuleOperator.LessThan => left < rule.CompareValue,
-                    RuleOperator.GreaterThan => left > rule.CompareValue,
-                    RuleOperator.Equal => left == rule.CompareValue,
-                    _ => false
-                };
+            var character = characters.FirstOrDefault(
+                character => character.Id == effect.CharacterId);
 
-                if (condition)
-                {
-                    int current = GetStatValue(ch, StatGroup.CurrentStats, rule.EffectStat);
-                    int updated = current + rule.ChangeValue;
-                    updated = Math.Clamp(updated, 0, 100);
-                    SetCurrentStat(ch, rule.EffectStat, updated);
-                }
+            // Characters, der ikke er valgt til sessionen, ignoreres.
+            if (character == null)
+                continue;
+
+            foreach (var change in effect.Changes)
+            {
+                ApplyChange(character, change);
             }
         }
     }
 
-    static int GetStatValue(Character ch, StatGroup group, string statName)
+    private static void ApplyChange(
+        Character character,
+        StatChange change)
     {
-        if (group == StatGroup.Traits)
-        {
-            return statName switch
-            {
-                nameof(CharacterTraits.Strukturbehov) => ch.Traits.Strukturbehov,
-                nameof(CharacterTraits.SocialtBehov) => ch.Traits.SocialtBehov,
-                nameof(CharacterTraits.Risikovillighed) => ch.Traits.Risikovillighed,
-                nameof(CharacterTraits.PresTolerance) => ch.Traits.PresTolerance,
-                nameof(CharacterTraits.Fysisk) => ch.Traits.Fysisk,
-                nameof(CharacterTraits.Erfaringsniveau) => ch.Traits.Erfaringsniveau,
-                _ => 0
-            };
-        }
-        else
-        {
-            return statName switch
-            {
-                nameof(CurrentStats.TjenesteMotivation) => ch.CurrentStats.TjenesteMotivation,
-                nameof(CurrentStats.Stress) => ch.CurrentStats.Stress,
-                nameof(CurrentStats.Sociallyst) => ch.CurrentStats.Sociallyst,
-                nameof(CurrentStats.Tillid) => ch.CurrentStats.Tillid,
-                _ => 0
-            };
-        }
-    }
+        var amount = Math.Clamp(change.Amount, -100, 100);
 
-    static void SetCurrentStat(Character ch, string statName, int value)
-    {
-        switch (statName)
+        switch (change.StatName)
         {
-            case nameof(CurrentStats.TjenesteMotivation): ch.CurrentStats.TjenesteMotivation = value; break;
-            case nameof(CurrentStats.Stress): ch.CurrentStats.Stress = value; break;
-            case nameof(CurrentStats.Sociallyst): ch.CurrentStats.Sociallyst = value; break;
-            case nameof(CurrentStats.Tillid): ch.CurrentStats.Tillid = value; break;
-            default: break;
+            case nameof(CurrentStats.TjenesteMotivation):
+                character.CurrentStats.TjenesteMotivation = Math.Clamp(
+                    character.CurrentStats.TjenesteMotivation + amount,
+                    0,
+                    100);
+                break;
+
+            case nameof(CurrentStats.Stress):
+                character.CurrentStats.Stress = Math.Clamp(
+                    character.CurrentStats.Stress + amount,
+                    0,
+                    100);
+                break;
+
+            case nameof(CurrentStats.Sociallyst):
+                character.CurrentStats.Sociallyst = Math.Clamp(
+                    character.CurrentStats.Sociallyst + amount,
+                    0,
+                    100);
+                break;
+
+            case nameof(CurrentStats.Tillid):
+                character.CurrentStats.Tillid = Math.Clamp(
+                    character.CurrentStats.Tillid + amount,
+                    0,
+                    100);
+                break;
         }
     }
 }
-

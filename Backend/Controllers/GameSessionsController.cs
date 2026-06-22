@@ -2,9 +2,6 @@ using Backend.Repositories;
 using Backend.Services;
 using Core;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Backend.Controllers;
 
@@ -12,44 +9,65 @@ namespace Backend.Controllers;
 [Route("api/v1/[controller]")]
 public class GameSessionsController : ControllerBase
 {
-    private readonly IGameSessionRepository _repo;
-    private readonly IQuestionRepository _questionRepo;
+    private readonly IGameSessionRepository _repository;
 
-    public GameSessionsController(IGameSessionRepository repo, IQuestionRepository questionRepo)
+    public GameSessionsController(
+        IGameSessionRepository repository)
     {
-        _repo = repo;
-        _questionRepo = questionRepo;
+        _repository = repository;
     }
 
     [HttpPost]
-    public async Task<ActionResult<GameSession>> Create([FromBody] GameSession session)
+    public async Task<ActionResult<GameSession>> Create(
+        [FromBody] GameSession session)
     {
-        var created = await _repo.CreateAsync(session);
-        return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
+        session.Characters ??= new();
+
+        // Hver session får sine egne kopier af CurrentStats.
+        foreach (var character in session.Characters)
+            character.ResetCurrentStats();
+
+        var created = await _repository.CreateAsync(session);
+
+        return CreatedAtAction(
+            nameof(Get),
+            new { id = created.Id },
+            created);
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<GameSession>> Get(string id)
     {
-        var s = await _repo.GetAsync(id);
-        if (s == null) return NotFound();
-        return s;
+        var session = await _repository.GetAsync(id);
+
+        if (session == null)
+            return NotFound();
+
+        return session;
     }
 
     [HttpGet]
-    public async Task<List<GameSession>> GetAll() => await _repo.GetAllAsync();
+    public async Task<List<GameSession>> GetAll()
+    {
+        return await _repository.GetAllAsync();
+    }
 
     [HttpPost("{id}/join")]
-    public async Task<ActionResult<Player>> Join(string id, [FromBody] Player player)
+    public async Task<ActionResult<Player>> Join(
+        string id,
+        [FromBody] Player player)
     {
-        var session = await _repo.GetAsync(id);
-        if (session == null) return NotFound();
+        var session = await _repository.GetAsync(id);
 
-        // Ensure player has id and role
-        if (string.IsNullOrEmpty(player.Id)) player.Id = Guid.NewGuid().ToString();
+        if (session == null)
+            return NotFound();
+
+        if (string.IsNullOrWhiteSpace(player.Id))
+            player.Id = Guid.NewGuid().ToString();
+
         player.Role = PlayerRole.Player;
 
-        await _repo.JoinPlayerAsync(id, player);
+        await _repository.JoinPlayerAsync(id, player);
 
         return Ok(player);
     }
@@ -57,81 +75,135 @@ public class GameSessionsController : ControllerBase
     [HttpPost("{id}/start")]
     public async Task<IActionResult> Start(string id)
     {
-        await _repo.SetStateAsync(id, GameState.Running);
+        var session = await _repository.GetAsync(id);
+
+        if (session == null)
+            return NotFound();
+
+        foreach (var character in session.Characters)
+            character.ResetCurrentStats();
+
+        session.State = GameState.Running;
+
+        await _repository.UpdateAsync(id, session);
+
         return NoContent();
     }
 
     [HttpPost("{id}/next")]
     public async Task<IActionResult> Next(string id)
     {
-        await _repo.AdvanceQuestionAsync(id);
+        await _repository.AdvanceQuestionAsync(id);
+
         return NoContent();
     }
 
     [HttpPost("{id}/applyAnswer")]
-    public async Task<IActionResult> ApplyAnswer(string id, [FromBody] ApplyAnswerRequest req)
+    public async Task<IActionResult> ApplyAnswer(
+        string id,
+        [FromBody] ApplyAnswerRequest request)
     {
-        var session = await _repo.GetAsync(id);
-        if (session == null) return NotFound();
+        var session = await _repository.GetAsync(id);
 
-        var question = session.Questions.FirstOrDefault(q => q.Id == req.QuestionId);
+        if (session == null)
+            return NotFound();
+
+        var question = session.Questions.FirstOrDefault(
+            question => question.Id == request.QuestionId);
+
         if (question == null)
-            return BadRequest("Question not found in session.");
+            return BadRequest("Spørgsmålet findes ikke i sessionen.");
 
-        var answer = question.AnswerOptions.FirstOrDefault(a => a.Id == req.AnswerId);
-        if (answer == null) return BadRequest("Answer not found.");
+        var answer = question.AnswerOptions.FirstOrDefault(
+            answer => answer.Id == request.AnswerId);
 
-        // By default this applies to the session's characters (global). For POC, clients should apply locally.
-        RuleEvaluator.ApplyAnswerOptionToCharacters(session.Characters, answer);
+        if (answer == null)
+            return BadRequest("Svarmuligheden findes ikke.");
 
-        await _repo.UpdateAsync(session.Id!, session);
+        RuleEvaluator.ApplyAnswerOptionToCharacters(
+            session.Characters,
+            answer);
+
+        await _repository.UpdateAsync(id, session);
+
         return NoContent();
     }
 
     [HttpPost("{id}/finish")]
     public async Task<IActionResult> Finish(string id)
     {
-        await _repo.SetStateAsync(id, GameState.Finished);
+        var session = await _repository.GetAsync(id);
+
+        if (session == null)
+            return NotFound();
+
+        // Sessionens CurrentStats nulstilles.
+        foreach (var character in session.Characters)
+            character.ResetCurrentStats();
+
+        session.State = GameState.Finished;
+
+        await _repository.UpdateAsync(id, session);
+
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
-        await _repo.DeleteAsync(id);
+        await _repository.DeleteAsync(id);
+
         return NoContent();
     }
 
-    // Player state endpoints: players POST their snapshot after answering; host can GET all snapshots
     [HttpPost("{id}/playerstate")]
-    public async Task<IActionResult> PostPlayerState(string id, [FromBody] PlayerState state)
+    public async Task<IActionResult> PostPlayerState(
+        string id,
+        [FromBody] PlayerState state)
     {
-        var session = await _repo.GetAsync(id);
-        if (session == null) return NotFound();
+        var session = await _repository.GetAsync(id);
 
-        // Validate that the player is part of the session
-        if (string.IsNullOrEmpty(state.PlayerId) || session.Players == null || !session.Players.Any(p => p.Id == state.PlayerId))
-            return BadRequest("Player not part of session.");
+        if (session == null)
+            return NotFound();
 
-        await _repo.PostPlayerStateAsync(id, state);
+        var playerExists = session.Players.Any(
+            player => player.Id == state.PlayerId);
+
+        if (string.IsNullOrWhiteSpace(state.PlayerId) ||
+            !playerExists)
+        {
+            return BadRequest("Spilleren er ikke med i sessionen.");
+        }
+
+        await _repository.PostPlayerStateAsync(id, state);
+
         return NoContent();
     }
 
     [HttpGet("{id}/playerstates")]
-    public async Task<ActionResult<List<PlayerState>>> GetPlayerStates(string id)
+    public async Task<ActionResult<List<PlayerState>>> GetPlayerStates(
+        string id)
     {
-        var session = await _repo.GetAsync(id);
-        if (session == null) return NotFound();
-        var states = await _repo.GetPlayerStatesAsync(id);
-        return states;
+        var session = await _repository.GetAsync(id);
+
+        if (session == null)
+            return NotFound();
+
+        return await _repository.GetPlayerStatesAsync(id);
     }
 
     [HttpDelete("{id}/playerstate/{playerId}")]
-    public async Task<IActionResult> DeletePlayerState(string id, string playerId)
+    public async Task<IActionResult> DeletePlayerState(
+        string id,
+        string playerId)
     {
-        var session = await _repo.GetAsync(id);
-        if (session == null) return NotFound();
-        await _repo.RemovePlayerStateAsync(id, playerId);
+        var session = await _repository.GetAsync(id);
+
+        if (session == null)
+            return NotFound();
+
+        await _repository.RemovePlayerStateAsync(id, playerId);
+
         return NoContent();
     }
 
