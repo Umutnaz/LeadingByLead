@@ -10,97 +10,158 @@
 <PageTitle>Spil - LeadingByLead</PageTitle>
 
 <main class="game-page">
-@if (session == null)
-{
-    <section class="status-card warning">Henter spildata...</section>
-}
-else if (session.State != GameState.Running)
-{
-    <section class="status-card info">Spillet er ikke startet endnu. Vent på hosten.</section>
-}
-else if (currentQuestion == null)
-{
-    <section class="finished-card">
-        <span>🎉</span>
-        <h1>Spillet er færdigt</h1>
-        <p>Dit gruppegennemsnit</p>
-        <strong>@FormatNumber(CalculateGroupAverage())</strong>
-        <button @onclick="GoHome">Gå hjem</button>
-    </section>
-}
-else
-{
-    <section class="game-layout">
-        <article class="question-card">
-            <div class="question-topline">
-                <span>Spørgsmål @(session.CurrentQuestionIndex + 1) / @session.Questions.Count</span>
-                @if (hasAnswered)
-                {
-                    <span class="answered-badge">Svar sendt</span>
-                }
-            </div>
+    @if (session == null)
+    {
+        <section class="status-card warning">
+            Henter spildata...
+        </section>
+    }
+    else if (session.State != GameState.Running)
+    {
+        <section class="status-card info">
+            Spillet er ikke startet endnu. Vent på hosten.
+        </section>
+    }
+    else if (currentQuestion == null)
+    {
+        <section class="finished-card">
+            <span>🎉</span>
+            <h1>Spillet er færdigt</h1>
+            <p>Dit gruppegennemsnit</p>
 
-            <h1>@currentQuestion.Text</h1>
+            <strong>
+                @FormatNumber(CalculateGroupAverage())
+            </strong>
 
-            <div class="answer-grid">
-                @for (var i = 0; i < currentQuestion.AnswerOptions.Count; i++)
-                {
-                    var index = i;
-                    var answer = currentQuestion.AnswerOptions[index];
+            <button @onclick="GoHome">
+                Gå hjem
+            </button>
+        </section>
+    }
+    else
+    {
+        <section class="game-layout">
+            <article class="question-card">
+                <div class="question-topline">
+                    <span>
+                        Spørgsmål
+                        @(session.CurrentQuestionIndex + 1)
+                        /
+                        @session.Questions.Count
+                    </span>
 
-                    <button class="answer-button answer-@index" @onclick="() => ChooseAnswer(answer)" disabled="@hasAnswered">
-                        <span class="answer-shape">@GetAnswerIcon(index)</span>
-                        <span>@answer.Text</span>
-                    </button>
-                }
-            </div>
-
-            @if (hasAnswered)
-            {
-                <div class="wait-banner">Svar indsendt. Vent på næste spørgsmål...</div>
-            }
-        </article>
-
-        <aside class="stats-panel">
-            <header>
-                <span>Din gruppe</span>
-                <strong>@FormatNumber(CalculateGroupAverage())</strong>
-            </header>
-
-            @if (playerCharacters == null || playerCharacters.Count == 0)
-            {
-                <div class="empty-state">Ingen characters fundet.</div>
-            }
-            else
-            {
-                <div class="stat-list">
-                    @StatBar("Motivation", GetAverageStat(c => c.CurrentStats.TjenesteMotivation), "motivation")
-                    @StatBar("Stress", GetAverageStat(c => c.CurrentStats.Stress), "stress")
-                    @StatBar("Sociallyst", GetAverageStat(c => c.CurrentStats.Sociallyst), "social")
-                    @StatBar("Tillid", GetAverageStat(c => c.CurrentStats.Tillid), "trust")
-                </div>
-
-                <div class="mini-characters">
-                    @foreach (var character in playerCharacters)
+                    @if (hasAnswered)
                     {
-                        <div>
-                            <strong>@character.Name</strong>
-                            <span>@FormatNumber(CalculateCharacterAverage(character))</span>
-                        </div>
+                        <span class="answered-badge">
+                            Svar sendt
+                        </span>
                     }
                 </div>
-            }
-        </aside>
-    </section>
-}
+
+                <h1>@currentQuestion.Text</h1>
+
+                <div class="answer-grid">
+                    @for (var i = 0;
+                        i < currentQuestion.AnswerOptions.Count;
+                        i++)
+                    {
+                        var index = i;
+                        var answer =
+                            currentQuestion.AnswerOptions[index];
+
+                        <button class="answer-button answer-@index"
+                                @onclick="() => ChooseAnswer(answer)"
+                                disabled="@hasAnswered">
+                            <span class="answer-shape">
+                                @GetAnswerIcon(index)
+                            </span>
+
+                            <span>@answer.Text</span>
+                        </button>
+                    }
+                </div>
+
+                @if (hasAnswered)
+                {
+                    <div class="wait-banner">
+                        Svar indsendt. Vent på næste spørgsmål...
+                    </div>
+                }
+            </article>
+
+            <aside class="stats-panel">
+                <header>
+                    <span>Din gruppe</span>
+
+                    <strong>
+                        @FormatNumber(CalculateGroupAverage())
+                    </strong>
+                </header>
+
+                @if (playerCharacters.Count == 0)
+                {
+                    <div class="empty-state">
+                        Ingen characters fundet.
+                    </div>
+                }
+                else
+                {
+                    <div class="stat-list">
+                        @StatBar(
+                            "Motivation",
+                            GetAverageStat(character =>
+                                character.CurrentStats
+                                    .TjenesteMotivation),
+                            "motivation")
+
+                        @StatBar(
+                            "Stress",
+                            GetAverageStat(character =>
+                                character.CurrentStats.Stress),
+                            "stress")
+
+                        @StatBar(
+                            "Sociallyst",
+                            GetAverageStat(character =>
+                                character.CurrentStats.Sociallyst),
+                            "social")
+
+                        @StatBar(
+                            "Tillid",
+                            GetAverageStat(character =>
+                                character.CurrentStats.Tillid),
+                            "trust")
+                    </div>
+
+                    <div class="mini-characters">
+                        @foreach (var character in playerCharacters)
+                        {
+                            <div>
+                                <strong>@character.Name</strong>
+
+                                <span>
+                                    @FormatNumber(
+                                        CalculateCharacterAverage(
+                                            character))
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+            </aside>
+        </section>
+    }
 </main>
 
 @code {
     private GameSession? session;
     private Question? currentQuestion;
+
     private List<Character> playerCharacters = new();
+
     private bool hasAnswered;
     private int lastQuestionIndex = -1;
+
     private System.Threading.Timer? pollTimer;
 
     protected override async Task OnInitializedAsync()
@@ -111,31 +172,53 @@ else
             return;
         }
 
-        if (string.IsNullOrEmpty(LocalStorage.GetCurrentSessionId()))
+        if (string.IsNullOrWhiteSpace(
+            LocalStorage.GetCurrentSessionId()))
         {
             Navigation.NavigateTo("/waiting-area");
             return;
         }
 
-        playerCharacters = LocalStorage.GetPlayerCharacters();
+        playerCharacters =
+            LocalStorage.GetPlayerCharacters() ??
+            new List<Character>();
+
         await RefreshSession();
 
-        pollTimer = new System.Threading.Timer(async _ =>
-        {
-            await InvokeAsync(async () =>
+        pollTimer = new System.Threading.Timer(
+            async _ =>
             {
-                await RefreshSession();
-                StateHasChanged();
-            });
-        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+                await InvokeAsync(async () =>
+                {
+                    await RefreshSession();
+                    StateHasChanged();
+                });
+            },
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(2));
     }
 
     private async Task RefreshSession()
     {
-        var sessionId = LocalStorage.GetCurrentSessionId();
-        session = await GameSessionService.GetSessionAsync(sessionId);
+        var sessionId =
+            LocalStorage.GetCurrentSessionId();
 
-        if (session == null) return;
+        session =
+            await GameSessionService.GetSessionAsync(sessionId);
+
+        if (session == null)
+            return;
+
+        if (playerCharacters.Count == 0 &&
+            session.Characters.Count > 0)
+        {
+            playerCharacters = session.Characters
+                .Select(CloneCharacter)
+                .ToList();
+
+            LocalStorage.SavePlayerCharacters(playerCharacters);
+        }
 
         if (session.State == GameState.Finished)
         {
@@ -143,17 +226,30 @@ else
             return;
         }
 
-        if (session.State == GameState.Running && session.CurrentQuestionIndex < session.Questions.Count)
+        if (session.State == GameState.Running &&
+            session.CurrentQuestionIndex <
+            session.Questions.Count)
         {
-            currentQuestion = session.Questions[session.CurrentQuestionIndex];
+            currentQuestion =
+                session.Questions[
+                    session.CurrentQuestionIndex];
 
-            if (lastQuestionIndex != session.CurrentQuestionIndex)
+            if (lastQuestionIndex !=
+                session.CurrentQuestionIndex)
             {
-                var answered = LocalStorage.GetAnsweredQuestions();
-                hasAnswered = answered.TryGetValue(currentQuestion.Id, out _);
+                var answered =
+                    LocalStorage.GetAnsweredQuestions();
 
-                lastQuestionIndex = session.CurrentQuestionIndex;
-                LocalStorage.SetCurrentQuestionIndex(session.CurrentQuestionIndex);
+                hasAnswered =
+                    answered.TryGetValue(
+                        currentQuestion.Id,
+                        out _);
+
+                lastQuestionIndex =
+                    session.CurrentQuestionIndex;
+
+                LocalStorage.SetCurrentQuestionIndex(
+                    session.CurrentQuestionIndex);
             }
         }
         else if (session.State == GameState.Running)
@@ -164,26 +260,45 @@ else
 
     private async Task ChooseAnswer(AnswerOption option)
     {
-        if (hasAnswered || currentQuestion == null) return;
+        if (hasAnswered || currentQuestion == null)
+            return;
 
         hasAnswered = true;
 
-        ApplyRulesToCharacters(playerCharacters, option);
-        LocalStorage.SavePlayerCharacters(playerCharacters);
-        LocalStorage.AddAnsweredQuestion(currentQuestion.Id, option.Id);
+        ApplyCharacterEffects(
+            playerCharacters,
+            option);
+
+        LocalStorage.SavePlayerCharacters(
+            playerCharacters);
+
+        LocalStorage.AddAnsweredQuestion(
+            currentQuestion.Id,
+            option.Id);
 
         try
         {
             var playerState = new PlayerState
             {
-                PlayerId = LocalStorage.GetPlayerId(),
-                Name = LocalStorage.GetPlayerName(),
-                CurrentQuestionIndex = LocalStorage.GetCurrentQuestionIndex(),
-                Characters = BuildCharacterSnapshots(),
-                Answers = BuildAnswerRecords()
+                PlayerId =
+                    LocalStorage.GetPlayerId(),
+
+                Name =
+                    LocalStorage.GetPlayerName(),
+
+                CurrentQuestionIndex =
+                    LocalStorage.GetCurrentQuestionIndex(),
+
+                Characters =
+                    BuildCharacterSnapshots(),
+
+                Answers =
+                    BuildAnswerRecords()
             };
 
-            await GameSessionService.PostPlayerStateAsync(LocalStorage.GetCurrentSessionId(), playerState);
+            await GameSessionService.PostPlayerStateAsync(
+                LocalStorage.GetCurrentSessionId(),
+                playerState);
         }
         catch
         {
@@ -192,144 +307,149 @@ else
         await RefreshSession();
     }
 
-    private List<CharacterSnapshot> BuildCharacterSnapshots()
+    private static void ApplyCharacterEffects(
+        List<Character> characters,
+        AnswerOption option)
     {
-        var result = new List<CharacterSnapshot>();
-
-        foreach (var character in playerCharacters)
+        foreach (var effect in option.CharacterEffects)
         {
-            result.Add(new CharacterSnapshot
+            var character = characters.FirstOrDefault(
+                item => item.Id == effect.CharacterId);
+
+            if (character == null)
+                continue;
+
+            foreach (var change in effect.Changes)
             {
-                CharacterId = character.Id,
-                Name = character.Name,
-                CurrentStats = character.CurrentStats
-            });
-        }
-
-        return result;
-    }
-
-    private List<AnswerRecord> BuildAnswerRecords()
-    {
-        var result = new List<AnswerRecord>();
-        var answers = LocalStorage.GetAnsweredQuestions();
-
-        foreach (var answer in answers)
-        {
-            result.Add(new AnswerRecord
-            {
-                QuestionId = answer.Key,
-                AnswerId = answer.Value
-            });
-        }
-
-        return result;
-    }
-
-    private void ApplyRulesToCharacters(List<Character> characters, AnswerOption option)
-    {
-        foreach (var character in characters)
-        {
-            foreach (var rule in option.Rules)
-            {
-                var left = GetStatValue(character, rule.TargetGroup, rule.ConditionStat);
-
-                var condition = rule.Operator switch
-                {
-                    RuleOperator.LessThan => left < rule.CompareValue,
-                    RuleOperator.GreaterThan => left > rule.CompareValue,
-                    RuleOperator.Equal => left == rule.CompareValue,
-                    _ => false
-                };
-
-                if (!condition) continue;
-
-                var updated = Clamp(GetCurrentStat(character, rule.EffectStat) + rule.ChangeValue);
-                SetCurrentStat(character, rule.EffectStat, updated);
+                ApplyStatChange(character, change);
             }
         }
     }
 
-    private int GetStatValue(Character character, StatGroup group, string statName)
+    private static void ApplyStatChange(
+        Character character,
+        StatChange change)
     {
-        if (group == StatGroup.CurrentStats)
-        {
-            return GetCurrentStat(character, statName);
-        }
+        var amount =
+            Math.Clamp(change.Amount, -100, 100);
 
-        return statName switch
-        {
-            nameof(CharacterTraits.Strukturbehov) => character.Traits.Strukturbehov,
-            nameof(CharacterTraits.SocialtBehov) => character.Traits.SocialtBehov,
-            nameof(CharacterTraits.Risikovillighed) => character.Traits.Risikovillighed,
-            nameof(CharacterTraits.PresTolerance) => character.Traits.PresTolerance,
-            nameof(CharacterTraits.Fysisk) => character.Traits.Fysisk,
-            nameof(CharacterTraits.Erfaringsniveau) => character.Traits.Erfaringsniveau,
-            _ => 0
-        };
-    }
-
-    private int GetCurrentStat(Character character, string statName)
-    {
-        return statName switch
-        {
-            nameof(CurrentStats.TjenesteMotivation) => character.CurrentStats.TjenesteMotivation,
-            nameof(CurrentStats.Stress) => character.CurrentStats.Stress,
-            nameof(CurrentStats.Sociallyst) => character.CurrentStats.Sociallyst,
-            nameof(CurrentStats.Tillid) => character.CurrentStats.Tillid,
-            _ => 0
-        };
-    }
-
-    private void SetCurrentStat(Character character, string statName, int value)
-    {
-        switch (statName)
+        switch (change.StatName)
         {
             case nameof(CurrentStats.TjenesteMotivation):
-                character.CurrentStats.TjenesteMotivation = value;
+                character.CurrentStats.TjenesteMotivation =
+                    Math.Clamp(
+                        character.CurrentStats
+                            .TjenesteMotivation + amount,
+                        0,
+                        100);
                 break;
 
             case nameof(CurrentStats.Stress):
-                character.CurrentStats.Stress = value;
+                character.CurrentStats.Stress =
+                    Math.Clamp(
+                        character.CurrentStats.Stress + amount,
+                        0,
+                        100);
                 break;
 
             case nameof(CurrentStats.Sociallyst):
-                character.CurrentStats.Sociallyst = value;
+                character.CurrentStats.Sociallyst =
+                    Math.Clamp(
+                        character.CurrentStats.Sociallyst + amount,
+                        0,
+                        100);
                 break;
 
             case nameof(CurrentStats.Tillid):
-                character.CurrentStats.Tillid = value;
+                character.CurrentStats.Tillid =
+                    Math.Clamp(
+                        character.CurrentStats.Tillid + amount,
+                        0,
+                        100);
                 break;
         }
     }
 
-    private double GetAverageStat(Func<Character, int> statSelector)
+    private List<CharacterSnapshot> BuildCharacterSnapshots()
     {
-        if (playerCharacters.Count == 0) return 0;
+        return playerCharacters
+            .Select(character => new CharacterSnapshot
+            {
+                CharacterId = character.Id,
+                Name = character.Name,
 
-        double total = 0;
+                CurrentStats = new CurrentStats
+                {
+                    TjenesteMotivation =
+                        character.CurrentStats
+                            .TjenesteMotivation,
 
-        foreach (var character in playerCharacters)
-        {
-            total += statSelector(character);
-        }
+                    Stress =
+                        character.CurrentStats.Stress,
 
-        return total / playerCharacters.Count;
+                    Sociallyst =
+                        character.CurrentStats.Sociallyst,
+
+                    Tillid =
+                        character.CurrentStats.Tillid
+                }
+            })
+            .ToList();
+    }
+
+    private List<AnswerRecord> BuildAnswerRecords()
+    {
+        return LocalStorage.GetAnsweredQuestions()
+            .Select(answer => new AnswerRecord
+            {
+                QuestionId = answer.Key,
+                AnswerId = answer.Value
+            })
+            .ToList();
+    }
+
+    private double GetAverageStat(
+        Func<Character, int> statSelector)
+    {
+        if (playerCharacters.Count == 0)
+            return 0;
+
+        return playerCharacters
+            .Average(statSelector);
     }
 
     private double CalculateGroupAverage()
     {
-        if (playerCharacters.Count == 0) return 0;
+        if (playerCharacters.Count == 0)
+            return 0;
 
-        var motivation = GetAverageStat(c => c.CurrentStats.TjenesteMotivation);
-        var stress = 100 - GetAverageStat(c => c.CurrentStats.Stress);
-        var social = GetAverageStat(c => c.CurrentStats.Sociallyst);
-        var trust = GetAverageStat(c => c.CurrentStats.Tillid);
+        var motivation =
+            GetAverageStat(character =>
+                character.CurrentStats
+                    .TjenesteMotivation);
 
-        return (motivation + stress + social + trust) / 4;
+        var stress =
+            100 - GetAverageStat(character =>
+                character.CurrentStats.Stress);
+
+        var social =
+            GetAverageStat(character =>
+                character.CurrentStats.Sociallyst);
+
+        var trust =
+            GetAverageStat(character =>
+                character.CurrentStats.Tillid);
+
+        return (
+            motivation +
+            stress +
+            social +
+            trust
+        ) / 4;
     }
 
-    private double CalculateCharacterAverage(Character character)
+    private static double CalculateCharacterAverage(
+        Character character)
     {
         return (
             character.CurrentStats.TjenesteMotivation +
@@ -339,20 +459,72 @@ else
         ) / 4.0;
     }
 
-    private RenderFragment StatBar(string label, double value, string className)
+    private RenderFragment StatBar(
+        string label,
+        double value,
+        string className)
     {
         return @<div class="stat-row @className">
             <div>
                 <span>@label</span>
                 <strong>@FormatNumber(value)</strong>
             </div>
+
             <div class="meter">
-                <span style="width: @(FormatNumber(ClampDouble(value)))%"></span>
+                <span style="width: @(FormatNumber(
+                    ClampDouble(value)))%"></span>
             </div>
         </div>;
     }
 
-    private string GetAnswerIcon(int index)
+    private static Character CloneCharacter(
+        Character character)
+    {
+        var baseStats =
+            character.BaseStats ?? new BaseStats();
+
+        var currentStats =
+            character.CurrentStats ?? new CurrentStats();
+
+        return new Character
+        {
+            Id = character.Id,
+            Name = character.Name,
+            Description = character.Description,
+
+            BaseStats = new BaseStats
+            {
+                TjenesteMotivation =
+                    baseStats.TjenesteMotivation,
+
+                Stress =
+                    baseStats.Stress,
+
+                Sociallyst =
+                    baseStats.Sociallyst,
+
+                Tillid =
+                    baseStats.Tillid
+            },
+
+            CurrentStats = new CurrentStats
+            {
+                TjenesteMotivation =
+                    currentStats.TjenesteMotivation,
+
+                Stress =
+                    currentStats.Stress,
+
+                Sociallyst =
+                    currentStats.Sociallyst,
+
+                Tillid =
+                    currentStats.Tillid
+            }
+        };
+    }
+
+    private static string GetAnswerIcon(int index)
     {
         return index switch
         {
@@ -364,21 +536,12 @@ else
         };
     }
 
-    private int Clamp(int value)
+    private static double ClampDouble(double value)
     {
-        if (value < 0) return 0;
-        if (value > 100) return 100;
-        return value;
+        return Math.Clamp(value, 0, 100);
     }
 
-    private double ClampDouble(double value)
-    {
-        if (value < 0) return 0;
-        if (value > 100) return 100;
-        return value;
-    }
-
-    private string FormatNumber(double value)
+    private static string FormatNumber(double value)
     {
         return ((int)(value + 0.5)).ToString();
     }

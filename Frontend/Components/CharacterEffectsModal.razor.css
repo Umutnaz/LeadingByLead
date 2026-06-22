@@ -1,0 +1,144 @@
+﻿.effect-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background: rgba(20, 8, 45, .78);
+    backdrop-filter: blur(8px);
+}
+
+.effect-modal {
+    width: min(650px, 100%);
+    padding: 1.4rem;
+    border-radius: 1.3rem;
+    background: white;
+    color: #1f1147;
+    box-shadow:
+            0 .75rem 0 rgba(0, 0, 0, .22),
+            0 1.5rem 3rem rgba(0, 0, 0, .3);
+}
+
+.effect-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.effect-header span {
+    color: #46178f;
+    font-size: .8rem;
+    font-weight: 1000;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.effect-header h4 {
+    margin: .15rem 0 0;
+    color: #46178f;
+    font-size: 2.2rem;
+    font-weight: 1000;
+}
+
+.close-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: #e21b3c;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.effect-description {
+    margin: 1rem 0;
+    color: #5b5270;
+    font-weight: 750;
+}
+
+.effect-list {
+    display: grid;
+    gap: .7rem;
+}
+
+.effect-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 70px 100px auto;
+    align-items: center;
+    gap: .6rem;
+    padding: .75rem;
+    border: .15rem solid #ddd3ff;
+    border-radius: .85rem;
+    background: #f8f7ff;
+}
+
+.effect-row select,
+.effect-row input {
+    width: 100%;
+    border: .15rem solid #ddd3ff;
+    border-radius: .65rem;
+    padding: .55rem;
+    background: white;
+    color: #1f1147;
+    font: inherit;
+    font-weight: 900;
+}
+
+.effect-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    margin-top: 1.2rem;
+}
+
+.effect-actions > div {
+    display: flex;
+    gap: .65rem;
+}
+
+.effect-actions button {
+    border: 0;
+    border-radius: .75rem;
+    padding: .7rem .9rem;
+    color: white;
+    font-weight: 1000;
+    cursor: pointer;
+    box-shadow: 0 .25rem 0 rgba(0, 0, 0, .2);
+}
+
+.clear-button {
+    background: #e21b3c;
+}
+
+.cancel-button {
+    background: #6b5b95;
+}
+
+.save-button {
+    background: #26890c;
+}
+
+@media (max-width: 600px) {
+    .effect-row {
+        grid-template-columns: 1fr 65px 85px;
+    }
+
+    .effect-row > span {
+        display: none;
+    }
+
+    .effect-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .effect-actions > div {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+}

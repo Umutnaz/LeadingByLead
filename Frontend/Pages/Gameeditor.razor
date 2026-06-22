@@ -17,7 +17,10 @@
             <div>
                 <span class="eyebrow">Host panel</span>
                 <h1>Byg dit spil</h1>
-                <p>Vælg de spørgsmål og characters, der skal indgå, eller opret nye direkte fra editoren.</p>
+                <p>
+                    Vælg de spørgsmål og characters, der skal indgå,
+                    eller opret nye direkte fra editoren.
+                </p>
             </div>
 
             <button class="ghost-button" @onclick="GoHome">
@@ -59,10 +62,13 @@
                 else
                 {
                     <div class="item-list">
-                        @foreach (var questionItem in allQuestions.Select((value, index) => new { value, index }))
+                        @foreach (var questionItem in allQuestions
+                            .Select((value, index) => new { value, index }))
                         {
                             var question = questionItem.value;
-                            var selected = selectedQuestions.Any(q => q.Id == question.Id);
+                            var selected = selectedQuestions.Any(
+                                selectedQuestion =>
+                                    selectedQuestion.Id == question.Id);
 
                             <div class="list-card @(selected ? "is-selected" : "")">
                                 <span class="list-number">
@@ -72,13 +78,17 @@
                                 <label class="select-zone">
                                     <input type="checkbox"
                                            checked="@selected"
-                                           @onchange="e => ToggleQuestion(question, (bool)e.Value!)" />
+                                           @onchange="eventArgs =>
+                                               ToggleQuestion(
+                                                   question,
+                                                   (bool)eventArgs.Value!)" />
 
                                     <span class="check-ui"></span>
                                 </label>
 
                                 <div class="item-main"
-                                     @onclick="() => ToggleQuestion(question, !selected)">
+                                     @onclick="() =>
+                                         ToggleQuestion(question, !selected)">
                                     <h3>@question.Text</h3>
 
                                     <p>
@@ -88,12 +98,14 @@
 
                                 <div class="item-actions">
                                     <button class="small-button blue"
-                                            @onclick="() => OpenQuestionModal(question)">
+                                            @onclick="() =>
+                                                OpenQuestionModal(question)">
                                         Rediger
                                     </button>
 
                                     <button class="small-button red"
-                                            @onclick="() => DeleteQuestion(question.Id)">
+                                            @onclick="() =>
+                                                DeleteQuestion(question.Id)">
                                         Slet
                                     </button>
                                 </div>
@@ -136,10 +148,13 @@
                 else
                 {
                     <div class="item-list">
-                        @foreach (var characterItem in allCharacters.Select((value, index) => new { value, index }))
+                        @foreach (var characterItem in allCharacters
+                            .Select((value, index) => new { value, index }))
                         {
                             var character = characterItem.value;
-                            var selected = selectedCharacters.Any(c => c.Id == character.Id);
+                            var selected = selectedCharacters.Any(
+                                selectedCharacter =>
+                                    selectedCharacter.Id == character.Id);
 
                             <div class="list-card @(selected ? "is-selected" : "")">
                                 <span class="list-number">
@@ -149,40 +164,54 @@
                                 <label class="select-zone">
                                     <input type="checkbox"
                                            checked="@selected"
-                                           @onchange="e => ToggleCharacter(character, (bool)e.Value!)" />
+                                           @onchange="eventArgs =>
+                                               ToggleCharacter(
+                                                   character,
+                                                   (bool)eventArgs.Value!)" />
 
                                     <span class="check-ui"></span>
                                 </label>
 
                                 <div class="item-main"
-                                     @onclick="() => ToggleCharacter(character, !selected)">
+                                     @onclick="() =>
+                                         ToggleCharacter(character, !selected)">
                                     <h3>@character.Name</h3>
 
                                     <p>@character.Description</p>
 
                                     <div class="stat-chips">
                                         <span>
-                                            Struktur @character.Traits.Strukturbehov
+                                            Motivation
+                                            @character.BaseStats.TjenesteMotivation
                                         </span>
 
                                         <span>
-                                            Social @character.Traits.SocialtBehov
+                                            Stress
+                                            @character.BaseStats.Stress
                                         </span>
 
                                         <span>
-                                            Pres @character.Traits.PresTolerance
+                                            Social
+                                            @character.BaseStats.Sociallyst
+                                        </span>
+
+                                        <span>
+                                            Tillid
+                                            @character.BaseStats.Tillid
                                         </span>
                                     </div>
                                 </div>
 
                                 <div class="item-actions">
                                     <button class="small-button blue"
-                                            @onclick="() => OpenCharacterModal(character)">
+                                            @onclick="() =>
+                                                OpenCharacterModal(character)">
                                         Rediger
                                     </button>
 
                                     <button class="small-button red"
-                                            @onclick="() => DeleteCharacter(character.Id)">
+                                            @onclick="() =>
+                                                DeleteCharacter(character.Id)">
                                         Slet
                                     </button>
                                 </div>
@@ -203,7 +232,9 @@
 
             <button class="start-button"
                     @onclick="CreateGame"
-                    disabled="@(selectedCharacters.Count == 0 || selectedQuestions.Count == 0)">
+                    disabled="@(
+                        selectedCharacters.Count == 0 ||
+                        selectedQuestions.Count == 0)">
                 Opret spil
             </button>
         </section>
@@ -236,23 +267,24 @@
 
 <CharacterModal Visible="@showCharacterModal"
                 VisibleChanged="@(async value =>
-                                {
-                                    showCharacterModal = value;
+                {
+                    showCharacterModal = value;
 
-                                    if (!value)
-                                        await RefreshLists();
-                                })"
+                    if (!value)
+                        await RefreshLists();
+                })"
                 Model="@editingCharacter" />
 
 <QuestionModal Visible="@showQuestionModal"
                VisibleChanged="@(async value =>
-                               {
-                                   showQuestionModal = value;
+               {
+                   showQuestionModal = value;
 
-                                   if (!value)
-                                       await RefreshLists();
-                               })"
-               Model="@editingQuestion" />
+                   if (!value)
+                       await RefreshLists();
+               })"
+               Model="@editingQuestion"
+               Characters="@(allCharacters ?? new List<Character>())" />
 
 @code {
     private List<Character>? allCharacters;
@@ -286,15 +318,22 @@
     {
         try
         {
-            allCharacters = await CharacterService.GetAllCharactersAsync();
-            allQuestions = await QuestionService.GetAllQuestionsAsync();
+            allCharacters =
+                await CharacterService.GetAllCharactersAsync();
+
+            allQuestions =
+                await QuestionService.GetAllQuestionsAsync();
 
             selectedCharacters = selectedCharacters
-                .Where(selected => allCharacters.Any(character => character.Id == selected.Id))
+                .Where(selected =>
+                    allCharacters.Any(character =>
+                        character.Id == selected.Id))
                 .ToList();
 
             selectedQuestions = selectedQuestions
-                .Where(selected => allQuestions.Any(question => question.Id == selected.Id))
+                .Where(selected =>
+                    allQuestions.Any(question =>
+                        question.Id == selected.Id))
                 .ToList();
 
             StateHasChanged();
@@ -309,8 +348,8 @@
         editingCharacter = character == null
             ? new Character
             {
-                CurrentStats = new CurrentStats(),
-                Traits = new CharacterTraits()
+                BaseStats = new BaseStats(),
+                CurrentStats = new CurrentStats()
             }
             : CloneCharacter(character);
 
@@ -320,7 +359,10 @@
     private void OpenQuestionModal(Question? question)
     {
         editingQuestion = question == null
-            ? new Question()
+            ? new Question
+            {
+                AnswerOptions = new List<AnswerOption>()
+            }
             : CloneQuestion(question);
 
         showQuestionModal = true;
@@ -348,10 +390,15 @@
         await RefreshLists();
     }
 
-    private void ToggleCharacter(Character character, bool isChecked)
+    private void ToggleCharacter(
+        Character character,
+        bool isChecked)
     {
-        if (isChecked && selectedCharacters.All(item => item.Id != character.Id))
+        if (isChecked &&
+            selectedCharacters.All(item => item.Id != character.Id))
+        {
             selectedCharacters.Add(character);
+        }
 
         if (!isChecked)
         {
@@ -361,10 +408,15 @@
         }
     }
 
-    private void ToggleQuestion(Question question, bool isChecked)
+    private void ToggleQuestion(
+        Question question,
+        bool isChecked)
     {
-        if (isChecked && selectedQuestions.All(item => item.Id != question.Id))
+        if (isChecked &&
+            selectedQuestions.All(item => item.Id != question.Id))
+        {
             selectedQuestions.Add(question);
+        }
 
         if (!isChecked)
         {
@@ -376,8 +428,11 @@
 
     private async Task CreateGame()
     {
-        if (selectedCharacters.Count == 0 || selectedQuestions.Count == 0)
+        if (selectedCharacters.Count == 0 ||
+            selectedQuestions.Count == 0)
+        {
             return;
+        }
 
         var session = new GameSession
         {
@@ -387,14 +442,21 @@
                 Role = PlayerRole.Host
             },
 
-            Characters = selectedCharacters,
-            Questions = selectedQuestions,
+            Characters = selectedCharacters
+                .Select(CloneCharacter)
+                .ToList(),
+
+            Questions = selectedQuestions
+                .Select(CloneQuestion)
+                .ToList(),
+
             State = GameState.Lobby,
-            Players = new(),
+            Players = new List<Player>(),
             CurrentQuestionIndex = 0
         };
 
-        var created = await GameSessionService.CreateSessionAsync(session);
+        var created =
+            await GameSessionService.CreateSessionAsync(session);
 
         if (created?.Id == null)
             return;
@@ -402,33 +464,50 @@
         currentSessionId = created.Id;
 
         LocalStorage.SetCurrentSessionId(created.Id);
-        LocalStorage.SavePlayerCharacters(selectedCharacters);
+
+        LocalStorage.SavePlayerCharacters(
+            created.Characters ?? session.Characters);
     }
 
     private static Character CloneCharacter(Character character)
     {
+        var baseStats = character.BaseStats ?? new BaseStats();
+        var currentStats = character.CurrentStats ?? new CurrentStats();
+
         return new Character
         {
             Id = character.Id,
             Name = character.Name,
             Description = character.Description,
 
-            CurrentStats = new CurrentStats
+            BaseStats = new BaseStats
             {
-                TjenesteMotivation = character.CurrentStats.TjenesteMotivation,
-                Stress = character.CurrentStats.Stress,
-                Sociallyst = character.CurrentStats.Sociallyst,
-                Tillid = character.CurrentStats.Tillid
+                TjenesteMotivation =
+                    baseStats.TjenesteMotivation,
+
+                Stress =
+                    baseStats.Stress,
+
+                Sociallyst =
+                    baseStats.Sociallyst,
+
+                Tillid =
+                    baseStats.Tillid
             },
 
-            Traits = new CharacterTraits
+            CurrentStats = new CurrentStats
             {
-                Strukturbehov = character.Traits.Strukturbehov,
-                SocialtBehov = character.Traits.SocialtBehov,
-                Risikovillighed = character.Traits.Risikovillighed,
-                PresTolerance = character.Traits.PresTolerance,
-                Fysisk = character.Traits.Fysisk,
-                Erfaringsniveau = character.Traits.Erfaringsniveau
+                TjenesteMotivation =
+                    currentStats.TjenesteMotivation,
+
+                Stress =
+                    currentStats.Stress,
+
+                Sociallyst =
+                    currentStats.Sociallyst,
+
+                Tillid =
+                    currentStats.Tillid
             }
         };
     }
@@ -440,25 +519,28 @@
             Id = question.Id,
             Text = question.Text,
 
-            AnswerOptions = question.AnswerOptions
+            AnswerOptions = question.AnswerOptions?
                 .Select(option => new AnswerOption
                 {
                     Id = option.Id,
                     Text = option.Text,
 
-                    Rules = option.Rules
-                        .Select(rule => new Rule
+                    CharacterEffects = option.CharacterEffects?
+                        .Select(effect => new CharacterEffect
                         {
-                            TargetGroup = rule.TargetGroup,
-                            ConditionStat = rule.ConditionStat,
-                            Operator = rule.Operator,
-                            CompareValue = rule.CompareValue,
-                            EffectStat = rule.EffectStat,
-                            ChangeValue = rule.ChangeValue
+                            CharacterId = effect.CharacterId,
+
+                            Changes = effect.Changes?
+                                .Select(change => new StatChange
+                                {
+                                    StatName = change.StatName,
+                                    Amount = change.Amount
+                                })
+                                .ToList() ?? new List<StatChange>()
                         })
-                        .ToList()
+                        .ToList() ?? new List<CharacterEffect>()
                 })
-                .ToList()
+                .ToList() ?? new List<AnswerOption>()
         };
     }
 

@@ -19,8 +19,9 @@
                 <div class="form-grid">
                     <label>
                         <span>Navn</span>
+
                         <input @bind="Model.Name"
-                               placeholder="Character navn" />
+                               placeholder="Characterens navn" />
                     </label>
 
                     <label>
@@ -33,8 +34,11 @@
 
                 <div class="trait-heading">
                     <div>
-                        <h5>Traits</h5>
-                        <p>Alle værdier går fra 0 til 100.</p>
+                        <h5>Grundværdier</h5>
+                        <p>
+                            Grundværdierne bruges som startværdier,
+                            hver gang et nyt spil oprettes.
+                        </p>
                     </div>
 
                     <span class="scale-badge">0 — 100</span>
@@ -42,40 +46,28 @@
 
                 <div class="trait-grid">
                     @NumberField(
-                        "Strukturbehov",
-                        "80 = har stort behov for klare rammer og faste planer.",
-                        Model.Traits.Strukturbehov,
-                        value => Model.Traits.Strukturbehov = value)
+                        "Tjenestemotivation",
+                        "Hvor motiveret characteren er ved spillets start.",
+                        Model.BaseStats.TjenesteMotivation,
+                        value => Model.BaseStats.TjenesteMotivation = value)
 
                     @NumberField(
-                        "Socialt behov",
-                        "80 = søger meget kontakt, støtte og fællesskab.",
-                        Model.Traits.SocialtBehov,
-                        value => Model.Traits.SocialtBehov = value)
+                        "Stress",
+                        "Hvor stresset characteren er ved spillets start.",
+                        Model.BaseStats.Stress,
+                        value => Model.BaseStats.Stress = value)
 
                     @NumberField(
-                        "Risikovillighed",
-                        "80 = tager let store chancer og usikre valg.",
-                        Model.Traits.Risikovillighed,
-                        value => Model.Traits.Risikovillighed = value)
+                        "Social lyst",
+                        "Hvor stor lyst characteren har til socialt samvær.",
+                        Model.BaseStats.Sociallyst,
+                        value => Model.BaseStats.Sociallyst = value)
 
                     @NumberField(
-                        "Prestolerance",
-                        "80 = fungerer godt og bevarer roen under pres.",
-                        Model.Traits.PresTolerance,
-                        value => Model.Traits.PresTolerance = value)
-
-                    @NumberField(
-                        "Fysisk",
-                        "80 = har høj fysisk styrke og udholdenhed.",
-                        Model.Traits.Fysisk,
-                        value => Model.Traits.Fysisk = value)
-
-                    @NumberField(
-                        "Erfaringsniveau",
-                        "80 = er meget erfaren og handler sikkert.",
-                        Model.Traits.Erfaringsniveau,
-                        value => Model.Traits.Erfaringsniveau = value)
+                        "Tillid",
+                        "Hvor stor tillid characteren har ved spillets start.",
+                        Model.BaseStats.Tillid,
+                        value => Model.BaseStats.Tillid = value)
                 </div>
             </div>
 
@@ -84,7 +76,9 @@
                     Annuller
                 </button>
 
-                <button class="save-button" @onclick="Save">
+                <button class="save-button"
+                        @onclick="Save"
+                        disabled="@string.IsNullOrWhiteSpace(Model.Name)">
                     Gem character
                 </button>
             </footer>
@@ -103,6 +97,12 @@
     public Character Model { get; set; } = new();
 
     private bool IsEdit => !string.IsNullOrWhiteSpace(Model.Id);
+
+    protected override void OnParametersSet()
+    {
+        Model.BaseStats ??= new BaseStats();
+        Model.CurrentStats ??= new CurrentStats();
+    }
 
     private async Task Save()
     {
@@ -123,23 +123,17 @@
 
     private void ClampValues()
     {
-        Model.Traits.Strukturbehov =
-            Math.Clamp(Model.Traits.Strukturbehov, 0, 100);
+        Model.BaseStats.TjenesteMotivation =
+            Math.Clamp(Model.BaseStats.TjenesteMotivation, 0, 100);
 
-        Model.Traits.SocialtBehov =
-            Math.Clamp(Model.Traits.SocialtBehov, 0, 100);
+        Model.BaseStats.Stress =
+            Math.Clamp(Model.BaseStats.Stress, 0, 100);
 
-        Model.Traits.Risikovillighed =
-            Math.Clamp(Model.Traits.Risikovillighed, 0, 100);
+        Model.BaseStats.Sociallyst =
+            Math.Clamp(Model.BaseStats.Sociallyst, 0, 100);
 
-        Model.Traits.PresTolerance =
-            Math.Clamp(Model.Traits.PresTolerance, 0, 100);
-
-        Model.Traits.Fysisk =
-            Math.Clamp(Model.Traits.Fysisk, 0, 100);
-
-        Model.Traits.Erfaringsniveau =
-            Math.Clamp(Model.Traits.Erfaringsniveau, 0, 100);
+        Model.BaseStats.Tillid =
+            Math.Clamp(Model.BaseStats.Tillid, 0, 100);
     }
 
     private RenderFragment NumberField(
@@ -153,19 +147,19 @@
                min="0"
                max="100"
                value="@value"
-               @onchange="e => SetTraitValue(e, setValue)" />
+               @onchange="eventArgs => SetValue(eventArgs, setValue)" />
 
         <small>@description</small>
     </label>;
 
-    private static void SetTraitValue(
+    private static void SetValue(
         ChangeEventArgs eventArgs,
         Action<int> setValue)
     {
         var parsed = int.TryParse(
             eventArgs.Value?.ToString(),
-            out var number);
+            out var value);
 
-        setValue(parsed ? Math.Clamp(number, 0, 100) : 0);
+        setValue(parsed ? Math.Clamp(value, 0, 100) : 0);
     }
 }

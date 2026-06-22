@@ -20,7 +20,7 @@
                     <span>Spørgsmålstekst</span>
 
                     <textarea @bind="Model.Text"
-                              placeholder="Skriv dit scenarie eller spørgsmål"></textarea>
+                              placeholder="Skriv scenariet eller spørgsmålet"></textarea>
                 </label>
 
                 <section class="options-section">
@@ -41,7 +41,8 @@
                     else
                     {
                         <div class="option-list">
-                            @foreach (var optionItem in Model.AnswerOptions.Select((value, index) => new { value, index }))
+                            @foreach (var optionItem in Model.AnswerOptions
+                                .Select((value, index) => new { value, index }))
                             {
                                 var option = optionItem.value;
 
@@ -63,92 +64,45 @@
                                         </button>
                                     </div>
 
-                                    <div class="rules-section">
-                                        <div class="rules-header">
-                                            <strong>Regler</strong>
-
-                                            <button class="rule-add-button"
-                                                    @onclick="() => AddRule(option)">
-                                                + Tilføj regel
-                                            </button>
+                                    <div class="characters-section">
+                                        <div class="characters-header">
+                                            <div>
+                                                <strong>Character-påvirkninger</strong>
+                                                <small>
+                                                    Klik på en character for at redigere påvirkningen.
+                                                </small>
+                                            </div>
                                         </div>
 
-                                        @if (option.Rules.Count == 0)
+                                        @if (Characters.Count == 0)
                                         {
-                                            <div class="empty-rules">
-                                                Ingen regler på denne svarmulighed.
+                                            <div class="empty-effects">
+                                                Der findes ingen characters endnu.
                                             </div>
                                         }
                                         else
                                         {
-                                            <div class="rule-list">
-                                                @foreach (var ruleItem in option.Rules.Select((value, index) => new { value, index }))
+                                            <div class="character-effect-list">
+                                                @foreach (var character in Characters)
                                                 {
-                                                    var rule = ruleItem.value;
+                                                    var effect = GetEffect(
+                                                        option,
+                                                        character.Id);
 
-                                                    <div class="rule-row" @key="rule">
-                                                        <span class="rule-number">
-                                                            @(ruleItem.index + 1)
+                                                    <button class="character-effect-row"
+                                                            @onclick="() => OpenEffectModal(option, character)">
+                                                        <span class="character-name">
+                                                            @GetFirstName(character.Name)
                                                         </span>
 
-                                                        <span>Alle med</span>
+                                                        <span class="effect-summary">
+                                                            @GetEffectSummary(effect)
+                                                        </span>
 
-                                                        <select @bind="rule.ConditionStat">
-                                                            @foreach (var trait in TraitNames)
-                                                            {
-                                                                <option value="@trait">
-                                                                    @GetStatLabel(trait)
-                                                                </option>
-                                                            }
-                                                        </select>
-
-                                                        <select @bind="rule.Operator">
-                                                            <option value="@RuleOperator.GreaterThan">
-                                                                over
-                                                            </option>
-
-                                                            <option value="@RuleOperator.LessThan">
-                                                                under
-                                                            </option>
-                                                        </select>
-
-                                                        <input class="small-number"
-                                                               type="number"
-                                                               min="0"
-                                                               max="100"
-                                                               value="@rule.CompareValue"
-                                                               @onchange="e => ChangeCompareValue(rule, e)" />
-
-                                                        <span>får</span>
-
-                                                        <select @bind="rule.EffectStat">
-                                                            @foreach (var stat in CurrentStatNames)
-                                                            {
-                                                                <option value="@stat">
-                                                                    @GetStatLabel(stat)
-                                                                </option>
-                                                            }
-                                                        </select>
-
-                                                        <select class="sign-select"
-                                                                value="@GetChangeSign(rule)"
-                                                                @onchange="e => ChangeSign(rule, e)">
-                                                            <option value="+">+</option>
-                                                            <option value="-">−</option>
-                                                        </select>
-
-                                                        <input class="small-number"
-                                                               type="number"
-                                                               min="0"
-                                                               max="100"
-                                                               value="@GetChangeAmount(rule)"
-                                                               @onchange="e => ChangeAmount(rule, e)" />
-
-                                                        <button class="rule-delete-button"
-                                                                @onclick="() => RemoveRule(option, rule)">
-                                                            Slet
-                                                        </button>
-                                                    </div>
+                                                        <span class="edit-effect">
+                                                            Rediger
+                                                        </span>
+                                                    </button>
                                                 }
                                             </div>
                                         }
@@ -165,13 +119,21 @@
                     Annuller
                 </button>
 
-                <button class="save-button" @onclick="Save">
+                <button class="save-button"
+                        @onclick="Save"
+                        disabled="@(!CanSave)">
                     Gem spørgsmål
                 </button>
             </footer>
         </div>
     </div>
 }
+
+<CharacterEffectsModal Visible="@showEffectsModal"
+                       VisibleChanged="value => showEffectsModal = value"
+                       Character="@selectedCharacter"
+                       Effect="@selectedEffect"
+                       Saved="SaveCharacterEffect" />
 
 @code {
     [Parameter]
@@ -183,31 +145,38 @@
     [Parameter]
     public Question Model { get; set; } = new();
 
+    [Parameter]
+    public IReadOnlyList<Character> Characters { get; set; } =
+        Array.Empty<Character>();
+
+    private bool showEffectsModal;
+    private Character? selectedCharacter;
+    private CharacterEffect? selectedEffect;
+    private AnswerOption? selectedOption;
+
     private bool IsEdit => !string.IsNullOrWhiteSpace(Model.Id);
 
-    private static readonly string[] CurrentStatNames =
-    {
-        nameof(CurrentStats.TjenesteMotivation),
-        nameof(CurrentStats.Stress),
-        nameof(CurrentStats.Sociallyst),
-        nameof(CurrentStats.Tillid)
-    };
+    private bool CanSave =>
+        !string.IsNullOrWhiteSpace(Model.Text) &&
+        Model.AnswerOptions.Count > 0 &&
+        Model.AnswerOptions.All(
+            option => !string.IsNullOrWhiteSpace(option.Text));
 
-    private static readonly string[] TraitNames =
+    protected override void OnParametersSet()
     {
-        nameof(CharacterTraits.Strukturbehov),
-        nameof(CharacterTraits.SocialtBehov),
-        nameof(CharacterTraits.Risikovillighed),
-        nameof(CharacterTraits.PresTolerance),
-        nameof(CharacterTraits.Fysisk),
-        nameof(CharacterTraits.Erfaringsniveau)
-    };
+        Model.AnswerOptions ??= new List<AnswerOption>();
+
+        foreach (var option in Model.AnswerOptions)
+            option.CharacterEffects ??= new List<CharacterEffect>();
+    }
 
     private void AddOption()
     {
         Model.AnswerOptions.Add(new AnswerOption
         {
-            Text = "Ny svarmulighed"
+            Id = Guid.NewGuid().ToString(),
+            Text = "Ny svarmulighed",
+            CharacterEffects = new List<CharacterEffect>()
         });
     }
 
@@ -216,110 +185,131 @@
         Model.AnswerOptions.Remove(option);
     }
 
-    private void AddRule(AnswerOption option)
+    private void OpenEffectModal(
+        AnswerOption option,
+        Character character)
     {
-        option.Rules.Add(new Rule
+        selectedOption = option;
+        selectedCharacter = character;
+
+        var existingEffect = GetEffect(option, character.Id);
+
+        selectedEffect = existingEffect == null
+            ? new CharacterEffect
+            {
+                CharacterId = character.Id,
+                Changes = new List<StatChange>()
+            }
+            : new CharacterEffect
+            {
+                CharacterId = existingEffect.CharacterId,
+
+                Changes = existingEffect.Changes
+                    .Select(change => new StatChange
+                    {
+                        StatName = change.StatName,
+                        Amount = change.Amount
+                    })
+                    .ToList()
+            };
+
+        showEffectsModal = true;
+    }
+
+    private Task SaveCharacterEffect(CharacterEffect effect)
+    {
+        if (selectedOption == null)
+            return Task.CompletedTask;
+
+        selectedOption.CharacterEffects.RemoveAll(
+            existing => existing.CharacterId == effect.CharacterId);
+
+        if (effect.Changes.Count > 0)
+            selectedOption.CharacterEffects.Add(effect);
+
+        return Task.CompletedTask;
+    }
+
+    private static CharacterEffect? GetEffect(
+        AnswerOption option,
+        string characterId)
+    {
+        return option.CharacterEffects.FirstOrDefault(
+            effect => effect.CharacterId == characterId);
+    }
+
+    private static string GetEffectSummary(CharacterEffect? effect)
+    {
+        if (effect == null || effect.Changes.Count == 0)
+            return "Ingen ændringer";
+
+        return string.Join(
+            ", ",
+            effect.Changes.Select(change =>
+                $"{GetStatLabel(change.StatName)} " +
+                $"{(change.Amount >= 0 ? "+" : "")}{change.Amount}"));
+    }
+
+    private static string GetFirstName(string name)
+    {
+        return string.IsNullOrWhiteSpace(name)
+            ? "Character"
+            : name.Split(
+                ' ',
+                StringSplitOptions.RemoveEmptyEntries).First();
+    }
+
+    private static string GetStatLabel(string statName)
+    {
+        return statName switch
         {
-            TargetGroup = StatGroup.Traits,
-            ConditionStat = nameof(CharacterTraits.Strukturbehov),
-            Operator = RuleOperator.GreaterThan,
-            CompareValue = 50,
-            EffectStat = nameof(CurrentStats.Stress),
-            ChangeValue = 10
-        });
-    }
-
-    private void RemoveRule(AnswerOption option, Rule rule)
-    {
-        option.Rules.Remove(rule);
-    }
-
-    private static void ChangeCompareValue(
-        Rule rule,
-        ChangeEventArgs eventArgs)
-    {
-        if (!int.TryParse(eventArgs.Value?.ToString(), out var value))
-            value = 0;
-
-        rule.CompareValue = Math.Clamp(value, 0, 100);
-    }
-
-    private static string GetChangeSign(Rule rule)
-    {
-        return rule.ChangeValue < 0 ? "-" : "+";
-    }
-
-    private static int GetChangeAmount(Rule rule)
-    {
-        return Math.Clamp(Math.Abs(rule.ChangeValue), 0, 100);
-    }
-
-    private static void ChangeSign(
-        Rule rule,
-        ChangeEventArgs eventArgs)
-    {
-        var amount = Math.Clamp(Math.Abs(rule.ChangeValue), 0, 100);
-        var sign = eventArgs.Value?.ToString();
-
-        rule.ChangeValue = sign == "-"
-            ? -amount
-            : amount;
-    }
-
-    private static void ChangeAmount(
-        Rule rule,
-        ChangeEventArgs eventArgs)
-    {
-        if (!int.TryParse(eventArgs.Value?.ToString(), out var amount))
-            amount = 0;
-
-        amount = Math.Clamp(Math.Abs(amount), 0, 100);
-
-        rule.ChangeValue = rule.ChangeValue < 0
-            ? -amount
-            : amount;
-    }
-
-    private static string GetStatLabel(string stat)
-    {
-        return stat switch
-        {
-            nameof(CurrentStats.TjenesteMotivation) => "Tjenestemotivation",
+            nameof(CurrentStats.TjenesteMotivation) => "Motivation",
             nameof(CurrentStats.Stress) => "Stress",
             nameof(CurrentStats.Sociallyst) => "Social lyst",
             nameof(CurrentStats.Tillid) => "Tillid",
-
-            nameof(CharacterTraits.Strukturbehov) => "Strukturbehov",
-            nameof(CharacterTraits.SocialtBehov) => "Socialt behov",
-            nameof(CharacterTraits.Risikovillighed) => "Risikovillighed",
-            nameof(CharacterTraits.PresTolerance) => "Prestolerance",
-            nameof(CharacterTraits.Fysisk) => "Fysisk",
-            nameof(CharacterTraits.Erfaringsniveau) => "Erfaringsniveau",
-
-            _ => stat
+            _ => statName
         };
     }
 
-    private void ClampRules()
+    private void NormalizeEffects()
     {
         foreach (var option in Model.AnswerOptions)
         {
-            foreach (var rule in option.Rules)
-            {
-                rule.TargetGroup = StatGroup.Traits;
-                rule.CompareValue = Math.Clamp(rule.CompareValue, 0, 100);
+            option.CharacterEffects ??= new List<CharacterEffect>();
 
-                var sign = rule.ChangeValue < 0 ? -1 : 1;
-                var amount = Math.Clamp(Math.Abs(rule.ChangeValue), 0, 100);
+            option.CharacterEffects = option.CharacterEffects
+                .Where(effect =>
+                    Characters.Any(
+                        character => character.Id == effect.CharacterId))
+                .Select(effect => new CharacterEffect
+                {
+                    CharacterId = effect.CharacterId,
 
-                rule.ChangeValue = sign * amount;
-            }
+                    Changes = effect.Changes
+                        .Where(change => change.Amount != 0)
+                        .GroupBy(change => change.StatName)
+                        .Select(group => group.Last())
+                        .Select(change => new StatChange
+                        {
+                            StatName = change.StatName,
+                            Amount = Math.Clamp(
+                                change.Amount,
+                                -100,
+                                100)
+                        })
+                        .ToList()
+                })
+                .Where(effect => effect.Changes.Count > 0)
+                .ToList();
         }
     }
 
     private async Task Save()
     {
-        ClampRules();
+        if (!CanSave)
+            return;
+
+        NormalizeEffects();
 
         if (IsEdit)
             await QuestionService.UpdateQuestionAsync(Model.Id, Model);

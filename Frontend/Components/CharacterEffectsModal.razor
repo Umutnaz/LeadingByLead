@@ -1,0 +1,218 @@
+﻿@using Core
+
+@if (Visible && Character != null)
+{
+    <div class="effect-backdrop">
+        <div class="effect-modal">
+            <header class="effect-header">
+                <div>
+                    <span>Påvirkning</span>
+                    <h4>@GetFirstName(Character.Name)</h4>
+                </div>
+
+                <button class="close-button" @onclick="Cancel">×</button>
+            </header>
+
+            <p class="effect-description">
+                Vælg hvordan @GetFirstName(Character.Name) påvirkes,
+                hvis spilleren vælger denne svarmulighed.
+            </p>
+
+            <div class="effect-list">
+                @foreach (var stat in StatNames)
+                {
+                    <div class="effect-row">
+                        <strong>@GetStatLabel(stat)</strong>
+
+                        <select value="@GetSign(stat)"
+                                @onchange="eventArgs => SetSign(stat, eventArgs)">
+                            <option value="+">+</option>
+                            <option value="-">−</option>
+                        </select>
+
+                        <input type="number"
+                               min="0"
+                               max="100"
+                               value="@GetAmount(stat)"
+                               @onchange="eventArgs => SetAmount(stat, eventArgs)" />
+
+                        <span>point</span>
+                    </div>
+                }
+            </div>
+
+            <footer class="effect-actions">
+                <button class="clear-button" @onclick="ClearAll">
+                    Nulstil alle
+                </button>
+
+                <div>
+                    <button class="cancel-button" @onclick="Cancel">
+                        Annuller
+                    </button>
+
+                    <button class="save-button" @onclick="Save">
+                        Gem ændringer
+                    </button>
+                </div>
+            </footer>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter]
+    public Character? Character { get; set; }
+
+    [Parameter]
+    public CharacterEffect? Effect { get; set; }
+
+    [Parameter]
+    public EventCallback<CharacterEffect> Saved { get; set; }
+
+    private CharacterEffect workingEffect = new();
+
+    private static readonly string[] StatNames =
+    {
+        nameof(CurrentStats.TjenesteMotivation),
+        nameof(CurrentStats.Stress),
+        nameof(CurrentStats.Sociallyst),
+        nameof(CurrentStats.Tillid)
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (!Visible || Character == null)
+            return;
+
+        workingEffect = new CharacterEffect
+        {
+            CharacterId = Character.Id,
+
+            Changes = Effect?.Changes?
+                .Select(change => new StatChange
+                {
+                    StatName = change.StatName,
+                    Amount = change.Amount
+                })
+                .ToList() ?? new List<StatChange>()
+        };
+    }
+
+    private StatChange GetOrCreateChange(string statName)
+    {
+        var change = workingEffect.Changes.FirstOrDefault(
+            item => item.StatName == statName);
+
+        if (change != null)
+            return change;
+
+        change = new StatChange
+        {
+            StatName = statName,
+            Amount = 0
+        };
+
+        workingEffect.Changes.Add(change);
+
+        return change;
+    }
+
+    private int GetAmount(string statName)
+    {
+        var change = workingEffect.Changes.FirstOrDefault(
+            item => item.StatName == statName);
+
+        return change == null
+            ? 0
+            : Math.Clamp(Math.Abs(change.Amount), 0, 100);
+    }
+
+    private string GetSign(string statName)
+    {
+        var change = workingEffect.Changes.FirstOrDefault(
+            item => item.StatName == statName);
+
+        return change?.Amount < 0 ? "-" : "+";
+    }
+
+    private void SetSign(
+        string statName,
+        ChangeEventArgs eventArgs)
+    {
+        var change = GetOrCreateChange(statName);
+        var amount = Math.Clamp(Math.Abs(change.Amount), 0, 100);
+
+        change.Amount = eventArgs.Value?.ToString() == "-"
+            ? -amount
+            : amount;
+    }
+
+    private void SetAmount(
+        string statName,
+        ChangeEventArgs eventArgs)
+    {
+        var change = GetOrCreateChange(statName);
+
+        if (!int.TryParse(eventArgs.Value?.ToString(), out var amount))
+            amount = 0;
+
+        amount = Math.Clamp(Math.Abs(amount), 0, 100);
+
+        change.Amount = change.Amount < 0
+            ? -amount
+            : amount;
+    }
+
+    private void ClearAll()
+    {
+        workingEffect.Changes.Clear();
+    }
+
+    private async Task Save()
+    {
+        workingEffect.Changes = workingEffect.Changes
+            .Where(change => change.Amount != 0)
+            .GroupBy(change => change.StatName)
+            .Select(group => group.Last())
+            .Select(change => new StatChange
+            {
+                StatName = change.StatName,
+                Amount = Math.Clamp(change.Amount, -100, 100)
+            })
+            .ToList();
+
+        await Saved.InvokeAsync(workingEffect);
+        await VisibleChanged.InvokeAsync(false);
+    }
+
+    private async Task Cancel()
+    {
+        await VisibleChanged.InvokeAsync(false);
+    }
+
+    private static string GetFirstName(string name)
+    {
+        return string.IsNullOrWhiteSpace(name)
+            ? "Character"
+            : name.Split(' ', StringSplitOptions.RemoveEmptyEntries).First();
+    }
+
+    private static string GetStatLabel(string statName)
+    {
+        return statName switch
+        {
+            nameof(CurrentStats.TjenesteMotivation) => "Tjenestemotivation",
+            nameof(CurrentStats.Stress) => "Stress",
+            nameof(CurrentStats.Sociallyst) => "Social lyst",
+            nameof(CurrentStats.Tillid) => "Tillid",
+            _ => statName
+        };
+    }
+}
