@@ -2,6 +2,7 @@
 @using Frontend.Services
 @using Frontend.Services.IService
 @using Core
+@implements IDisposable
 @inject ICharacterService CharacterService
 @inject IQuestionsService QuestionService
 @inject IGameSessionService GameSessionService
@@ -17,6 +18,7 @@
             <div>
                 <span class="eyebrow">Host panel</span>
                 <h1>Byg dit spil</h1>
+
                 <p>
                     Vælg de spørgsmål og characters, der skal indgå,
                     eller opret nye direkte fra editoren.
@@ -66,6 +68,7 @@
                             .Select((value, index) => new { value, index }))
                         {
                             var question = questionItem.value;
+
                             var selected = selectedQuestions.Any(
                                 selectedQuestion =>
                                     selectedQuestion.Id == question.Id);
@@ -152,6 +155,7 @@
                             .Select((value, index) => new { value, index }))
                         {
                             var character = characterItem.value;
+
                             var selected = selectedCharacters.Any(
                                 selectedCharacter =>
                                     selectedCharacter.Id == character.Id);
@@ -243,9 +247,15 @@
     {
         <section class="created-screen">
             <div class="created-card">
+                <span class="eyebrow created-eyebrow">
+                    Spillet er klar
+                </span>
+
                 <h1>Spil oprettet</h1>
 
-                <p>Del session ID'et med spillerne.</p>
+                <p>
+                    Spillerne skal bruge denne kode for at deltage:
+                </p>
 
                 <div class="session-code">
                     @currentSessionId
@@ -256,8 +266,52 @@
                     <span>@selectedCharacters.Count characters</span>
                 </div>
 
+                <section class="participant-section">
+                    <header class="participant-header">
+                        <div>
+                            <span>Deltagere</span>
+
+                            <strong>
+                                @(activeSession?.Players?.Count ?? 0)
+                            </strong>
+                        </div>
+
+                        <small>Opdateres automatisk</small>
+                    </header>
+
+                    @if (activeSession?.Players == null ||
+                         activeSession.Players.Count == 0)
+                    {
+                        <div class="participant-empty">
+                            Ingen deltagere endnu. Venter på at spillerne
+                            tilmelder sig...
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="participant-list">
+                            @foreach (var player in activeSession.Players)
+                            {
+                                <div class="participant-row"
+                                     @key="player.Id">
+                                    <span class="participant-icon">
+                                        @GetPlayerInitial(player.Name)
+                                    </span>
+
+                                    <strong>@player.Name</strong>
+
+                                    <span class="participant-status">
+                                        Klar
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </section>
+
                 <button class="start-button full"
-                        @onclick="GoToWaitingArea">
+                        @onclick="GoToWaitingArea"
+                        disabled="@(activeSession?.Players?.Count == 0)">
                     Gå til venteområde →
                 </button>
             </div>
@@ -295,6 +349,9 @@
 
     private string currentSessionId = "";
 
+    private GameSession? activeSession;
+    private System.Threading.Timer? participantTimer;
+
     private bool showCharacterModal;
     private Character editingCharacter = new();
 
@@ -312,6 +369,12 @@
         currentSessionId = LocalStorage.GetCurrentSessionId();
 
         await RefreshLists();
+
+        if (!string.IsNullOrWhiteSpace(currentSessionId))
+        {
+            await RefreshSessionParticipants();
+            StartParticipantPolling();
+        }
     }
 
     private async Task RefreshLists()
@@ -458,21 +521,73 @@
         var created =
             await GameSessionService.CreateSessionAsync(session);
 
-        if (created?.Id == null)
+        if (created == null ||
+            string.IsNullOrWhiteSpace(created.Id))
+        {
             return;
+        }
 
         currentSessionId = created.Id;
+        activeSession = created;
 
         LocalStorage.SetCurrentSessionId(created.Id);
 
         LocalStorage.SavePlayerCharacters(
-            created.Characters ?? session.Characters);
+            created.Characters);
+
+        StartParticipantPolling();
+    }
+
+    private void StartParticipantPolling()
+    {
+        participantTimer?.Dispose();
+
+        participantTimer = new System.Threading.Timer(
+            async _ =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await RefreshSessionParticipants();
+                    StateHasChanged();
+                });
+            },
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(2));
+    }
+
+    private async Task RefreshSessionParticipants()
+    {
+        if (string.IsNullOrWhiteSpace(currentSessionId))
+            return;
+
+        try
+        {
+            activeSession =
+                await GameSessionService.GetSessionAsync(
+                    currentSessionId);
+
+            if (activeSession == null)
+            {
+                participantTimer?.Dispose();
+                currentSessionId = "";
+
+                LocalStorage.SetCurrentSessionId("");
+            }
+        }
+        catch
+        {
+            // Den senest hentede session beholdes ved midlertidige fejl.
+        }
     }
 
     private static Character CloneCharacter(Character character)
     {
-        var baseStats = character.BaseStats ?? new BaseStats();
-        var currentStats = character.CurrentStats ?? new CurrentStats();
+        var baseStats =
+            character.BaseStats ?? new BaseStats();
+
+        var currentStats =
+            character.CurrentStats ?? new CurrentStats();
 
         return new Character
         {
@@ -544,14 +659,31 @@
         };
     }
 
+    private static string GetPlayerInitial(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "?";
+
+        return name.Trim()[0]
+            .ToString()
+            .ToUpperInvariant();
+    }
+
     private void GoToWaitingArea()
     {
+        participantTimer?.Dispose();
         Navigation.NavigateTo("/waiting-area");
     }
 
     private void GoHome()
     {
+        participantTimer?.Dispose();
         LocalStorage.ClearAll();
         Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        participantTimer?.Dispose();
     }
 }

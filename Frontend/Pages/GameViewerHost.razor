@@ -48,7 +48,10 @@ else
                             <span>@GetAnswerIcon(option.index)</span>
                             <div>
                                 <strong>@option.value.Text</strong>
-                                <small>@option.value.Rules.Count regler</small>
+                                <small>
+                                    @option.value.CharacterEffects.Sum(
+                                        effect => effect.Changes.Count) påvirkninger
+                                </small>
                             </div>
                         </div>
                     }

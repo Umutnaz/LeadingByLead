@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
-
-namespace Core;
+﻿namespace Core;
 
 public class GameSession
 {
-    public string Id { get; set; } = global::System.Guid.NewGuid().ToString();
+    public string Id { get; set; } = "";
 
     public Player Host { get; set; } = new();
 
@@ -14,10 +12,9 @@ public class GameSession
 
     public List<Question> Questions { get; set; } = new();
 
-    public int CurrentQuestionIndex { get; set; } = 0;
+    public int CurrentQuestionIndex { get; set; }
 
     public GameState State { get; set; } = GameState.Lobby;
-    
-    // Per-player snapshots (latest) - populated when players submit their local character states
+
     public List<PlayerState> PlayerStates { get; set; } = new();
 }

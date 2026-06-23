@@ -6,8 +6,16 @@
     display: flex;
     flex-direction: column;
     background:
-            radial-gradient(circle at top left, rgba(255, 166, 2, .28), transparent 27rem),
-            radial-gradient(circle at top right, rgba(19, 104, 206, .25), transparent 30rem),
+            radial-gradient(
+                    circle at top left,
+                    rgba(255, 166, 2, .28),
+                    transparent 27rem
+            ),
+            radial-gradient(
+                    circle at top right,
+                    rgba(19, 104, 206, .25),
+                    transparent 30rem
+            ),
             linear-gradient(
                     180deg,
                     #46178f 0%,
@@ -128,16 +136,19 @@
     padding-right: .4rem;
 }
 
-.item-list::-webkit-scrollbar {
+.item-list::-webkit-scrollbar,
+.participant-list::-webkit-scrollbar {
     width: .55rem;
 }
 
-.item-list::-webkit-scrollbar-track {
+.item-list::-webkit-scrollbar-track,
+.participant-list::-webkit-scrollbar-track {
     background: #eeeaf8;
     border-radius: 999px;
 }
 
-.item-list::-webkit-scrollbar-thumb {
+.item-list::-webkit-scrollbar-thumb,
+.participant-list::-webkit-scrollbar-thumb {
     background: #8b7ba8;
     border-radius: 999px;
 }
@@ -380,10 +391,14 @@ button:disabled {
     height: 100%;
     display: grid;
     place-items: center;
+    overflow-y: auto;
+    padding: 1rem;
 }
 
 .created-card {
-    width: min(560px, 100%);
+    width: min(620px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
     background: white;
     border-radius: 1.4rem;
     padding: 2rem;
@@ -391,6 +406,11 @@ button:disabled {
     box-shadow:
             0 .8rem 0 rgba(0, 0, 0, .22),
             0 1.6rem 3rem rgba(0, 0, 0, .18);
+}
+
+.created-eyebrow {
+    color: #26890c;
+    font-size: .82rem;
 }
 
 .created-card h1 {
@@ -412,7 +432,8 @@ button:disabled {
     border-radius: 1rem;
     background: #46178f;
     color: white;
-    font-size: 2rem;
+    font-size: 3.2rem;
+    line-height: 1;
     font-weight: 1000;
     letter-spacing: .04em;
     box-shadow: inset 0 -.35rem 0 rgba(0, 0, 0, .18);
@@ -426,4 +447,172 @@ button:disabled {
     flex-wrap: wrap;
     color: #1f1147;
     font-weight: 900;
+}
+
+.created-meta span {
+    padding: .4rem .7rem;
+    border-radius: 999px;
+    background: #f1edff;
+}
+
+.participant-section {
+    width: 100%;
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: #f7f4ff;
+    color: #1f1147;
+    text-align: left;
+}
+
+.participant-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: .8rem;
+}
+
+.participant-header > div {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+}
+
+.participant-header span {
+    font-size: 1rem;
+    font-weight: 1000;
+}
+
+.participant-header strong {
+    min-width: 2rem;
+    padding: .3rem .6rem;
+    border-radius: 999px;
+    background: #46178f;
+    color: white;
+    text-align: center;
+    font-weight: 1000;
+}
+
+.participant-header small {
+    color: #6b5b7c;
+    font-weight: 800;
+}
+
+.participant-list {
+    display: grid;
+    gap: .55rem;
+    max-height: 230px;
+    overflow-y: auto;
+    padding-right: .25rem;
+}
+
+.participant-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .7rem;
+    padding: .7rem;
+    border: .14rem solid #ddd3ff;
+    border-radius: .8rem;
+    background: white;
+}
+
+.participant-row strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.participant-icon {
+    width: 2.2rem;
+    height: 2.2rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #1368ce;
+    color: white;
+    font-weight: 1000;
+}
+
+.participant-status {
+    color: #26890c;
+    font-size: .85rem;
+    font-weight: 1000;
+}
+
+.participant-empty {
+    padding: 1rem;
+    border: .15rem dashed #cfc4ee;
+    border-radius: .8rem;
+    color: #6b5b7c;
+    text-align: center;
+    font-weight: 800;
+}
+
+@media (max-width: 950px) {
+    .editor-page {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+    }
+
+    .editor-grid {
+        grid-template-columns: 1fr;
+        overflow: visible;
+    }
+
+    .editor-panel {
+        min-height: 500px;
+    }
+}
+
+@media (max-width: 700px) {
+    .editor-page {
+        padding: 1rem;
+    }
+
+    .editor-hero {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .panel-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .primary-button {
+        width: 100%;
+    }
+
+    .list-card {
+        grid-template-columns: auto auto minmax(0, 1fr);
+    }
+
+    .item-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+
+    .create-bar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .start-button {
+        width: 100%;
+    }
+
+    .created-card {
+        padding: 1.35rem;
+    }
+
+    .created-card h1 {
+        font-size: 2.4rem;
+    }
+
+    .participant-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
 }
