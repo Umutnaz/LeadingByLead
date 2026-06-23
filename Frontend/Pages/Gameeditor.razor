@@ -633,7 +633,7 @@
         {
             Id = question.Id,
             Text = question.Text,
-
+            RequiredSelections = question.RequiredSelections,
             AnswerOptions = question.AnswerOptions?
                 .Select(option => new AnswerOption
                 {

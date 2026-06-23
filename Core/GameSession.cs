@@ -14,6 +14,9 @@ public class GameSession
 
     public int CurrentQuestionIndex { get; set; }
 
+    public QuestionPhase QuestionPhase { get; set; } =
+        QuestionPhase.Answering;
+
     public GameState State { get; set; } = GameState.Lobby;
 
     public List<PlayerState> PlayerStates { get; set; } = new();

@@ -1,5 +1,4 @@
 using Backend.Repositories;
-using Backend.Services;
 using Core;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,10 +21,16 @@ public class GameSessionsController : ControllerBase
         [FromBody] GameSession session)
     {
         session.Characters ??= new();
+        session.Questions ??= new();
+        session.Players ??= new();
+        session.PlayerStates ??= new();
 
-        // Hver session får sine egne kopier af CurrentStats.
         foreach (var character in session.Characters)
             character.ResetCurrentStats();
+
+        session.CurrentQuestionIndex = 0;
+        session.QuestionPhase = QuestionPhase.Answering;
+        session.State = GameState.Lobby;
 
         var created = await _repository.CreateAsync(session);
 
@@ -62,6 +67,9 @@ public class GameSessionsController : ControllerBase
         if (session == null)
             return NotFound();
 
+        if (session.State != GameState.Lobby)
+            return BadRequest("Spillet er allerede startet.");
+
         if (string.IsNullOrWhiteSpace(player.Id))
             player.Id = Guid.NewGuid().ToString();
 
@@ -83,6 +91,8 @@ public class GameSessionsController : ControllerBase
         foreach (var character in session.Characters)
             character.ResetCurrentStats();
 
+        session.CurrentQuestionIndex = 0;
+        session.QuestionPhase = QuestionPhase.Answering;
         session.State = GameState.Running;
 
         await _repository.UpdateAsync(id, session);
@@ -93,36 +103,23 @@ public class GameSessionsController : ControllerBase
     [HttpPost("{id}/next")]
     public async Task<IActionResult> Next(string id)
     {
-        await _repository.AdvanceQuestionAsync(id);
-
-        return NoContent();
-    }
-
-    [HttpPost("{id}/applyAnswer")]
-    public async Task<IActionResult> ApplyAnswer(
-        string id,
-        [FromBody] ApplyAnswerRequest request)
-    {
         var session = await _repository.GetAsync(id);
 
         if (session == null)
             return NotFound();
 
-        var question = session.Questions.FirstOrDefault(
-            question => question.Id == request.QuestionId);
+        if (session.State != GameState.Running)
+            return BadRequest("Spillet kører ikke.");
 
-        if (question == null)
-            return BadRequest("Spørgsmålet findes ikke i sessionen.");
-
-        var answer = question.AnswerOptions.FirstOrDefault(
-            answer => answer.Id == request.AnswerId);
-
-        if (answer == null)
-            return BadRequest("Svarmuligheden findes ikke.");
-
-        RuleEvaluator.ApplyAnswerOptionToCharacters(
-            session.Characters,
-            answer);
+        if (session.QuestionPhase == QuestionPhase.Answering)
+        {
+            session.QuestionPhase = QuestionPhase.Results;
+        }
+        else
+        {
+            session.CurrentQuestionIndex++;
+            session.QuestionPhase = QuestionPhase.Answering;
+        }
 
         await _repository.UpdateAsync(id, session);
 
@@ -136,10 +133,6 @@ public class GameSessionsController : ControllerBase
 
         if (session == null)
             return NotFound();
-
-        // Sessionens CurrentStats nulstilles.
-        foreach (var character in session.Characters)
-            character.ResetCurrentStats();
 
         session.State = GameState.Finished;
 
@@ -205,12 +198,5 @@ public class GameSessionsController : ControllerBase
         await _repository.RemovePlayerStateAsync(id, playerId);
 
         return NoContent();
-    }
-
-    public class ApplyAnswerRequest
-    {
-        public string PlayerId { get; set; } = "";
-        public string QuestionId { get; set; } = "";
-        public string AnswerId { get; set; } = "";
     }
 }
