@@ -490,14 +490,7 @@
 
     private static string GetAnswerIcon(int index)
     {
-        return index switch
-        {
-            0 => "▲",
-            1 => "◆",
-            2 => "●",
-            3 => "■",
-            _ => "★"
-        };
+        return NatoPhonetic.GetLabel(index);
     }
 
     private static string FormatNumber(double value)
