@@ -1,4 +1,7 @@
 @page "/waiting-area"
+@using Core
+@using Frontend.Services
+@using Frontend.Services.IService
 @implements IDisposable
 @inject IGameSessionService GameSessionService
 @inject LocalStorageService LocalStorage
@@ -11,7 +14,19 @@
         <header class="waiting-header">
             <span class="eyebrow">Lobby</span>
             <h1>Venteområde</h1>
-            <p>@(isHost ? "Del session ID'et og start spillet, når alle er klar." : "Deltag i spillet og følg med i hvem der er joinet.")</p>
+
+            <p>
+                @(isHost
+                    ? "Del session ID'et og start spillet, når alle er klar."
+                    : "Deltag i spillet og vent på hosten.")
+            </p>
+
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <div class="status-card warning">
+                    @message
+                </div>
+            }
         </header>
 
         <section class="lobby-grid">
@@ -20,34 +35,53 @@
                 {
                     <span class="card-icon">🎮</span>
                     <h2>Du er host</h2>
+
                     <p class="muted">Spillere kan joine med dette session ID:</p>
+
                     <div class="session-code">@currentSessionId</div>
+
                     <div class="host-actions">
-                        <button class="start-button" @onclick="StartGame" disabled="@(players.Count < 1)">Start spil</button>
-                        <button class="secondary-button" @onclick="LeaveGame">Forlad</button>
+                        <button class="start-button"
+                                @onclick="StartGame"
+                                disabled="@(players.Count < 1)">
+                            Start spil
+                        </button>
+
+                        <button class="secondary-button" @onclick="LeaveGame">
+                            Forlad
+                        </button>
                     </div>
                 }
-                else if (string.IsNullOrEmpty(LocalStorage.GetPlayerId()))
+                else if (string.IsNullOrEmpty(playerId))
                 {
                     <span class="card-icon">👥</span>
                     <h2>Join spillet</h2>
+
                     <div class="form-group">
                         <label>Dit navn</label>
                         <input @bind="playerName" placeholder="Fx Umut" />
                     </div>
+
                     <div class="form-group">
                         <label>Session ID</label>
                         <input @bind="joinSessionInput" placeholder="Indtast session ID" />
                     </div>
-                    <button class="start-button full" @onclick="JoinAsPlayer">Deltag</button>
+
+                    <button class="start-button full" @onclick="JoinAsPlayer">
+                        Deltag
+                    </button>
                 }
                 else
                 {
                     <span class="card-icon">✅</span>
                     <h2>Du er med</h2>
+
                     <p class="muted">Navn</p>
                     <div class="player-name-box">@playerName</div>
-                    <p class="wait-text">Vent på at hosten starter spillet...</p>
+
+                    <p class="wait-text">
+                        Vent på at hosten starter spillet...
+                    </p>
                 }
             </article>
 
@@ -57,24 +91,31 @@
                         <span class="panel-kicker">Deltagere</span>
                         <h2>@players.Count spillere</h2>
                     </div>
+
                     <span class="pulse-dot"></span>
                 </div>
 
                 @if (players.Count == 0)
                 {
-                    <div class="empty-players">Ingen spillere endnu...</div>
+                    <div class="empty-players">
+                        Ingen spillere endnu...
+                    </div>
                 }
                 else
                 {
                     <div class="player-cloud">
                         @foreach (var player in players)
                         {
-                            <div class="player-pill">
+                            <div class="player-pill" @key="player.Id">
                                 <span class="avatar">@GetInitial(player.Name)</span>
                                 <span>@player.Name</span>
+
                                 @if (isHost && player.Role == PlayerRole.Player)
                                 {
-                                    <button title="Fjern spiller" @onclick="() => RemovePlayer(player.Id)">×</button>
+                                    <button title="Fjern spiller"
+                                            @onclick="() => RemovePlayer(player.Id)">
+                                        ×
+                                    </button>
                                 }
                             </div>
                         }
@@ -86,96 +127,261 @@
 </main>
 
 @code {
+    private const string FixedSessionId = "1";
+
     private List<Player> players = new();
+
     private bool isHost;
+
     private string playerName = "";
+    private string playerId = "";
     private string currentSessionId = "";
-    private string joinSessionInput = "";
+    private string joinSessionInput = FixedSessionId;
+    private string message = "";
+
     private System.Threading.Timer? pollTimer;
 
     protected override async Task OnInitializedAsync()
     {
-        isHost = LocalStorage.GetPlayerRole() == "Host";
-        currentSessionId = LocalStorage.GetCurrentSessionId();
+        isHost = await LocalStorage.GetPlayerRoleAsync() == "Host";
+        currentSessionId = await LocalStorage.GetCurrentSessionIdAsync();
+        message = await LocalStorage.TakeNavigationMessageAsync();
 
-        if (isHost && string.IsNullOrEmpty(currentSessionId))
+        if (isHost)
         {
-            Navigation.NavigateTo("/gameeditor");
-            return;
+            currentSessionId = string.IsNullOrWhiteSpace(currentSessionId)
+                ? FixedSessionId
+                : currentSessionId;
+
+            var session =
+                await GameSessionService.GetSessionAsync(currentSessionId);
+
+            if (session == null)
+            {
+                await LocalStorage.SetNavigationMessageAsync(
+                    "Der findes ikke en aktiv host-session. Opret et spil først.");
+
+                Navigation.NavigateTo("/gameeditor");
+                return;
+            }
+
+            if (session.State == GameState.Running ||
+                session.State == GameState.Finished)
+            {
+                Navigation.NavigateTo("/gameviewer-host");
+                return;
+            }
+
+            await LocalStorage.SetCurrentSessionIdAsync(currentSessionId);
         }
-
-        if (!isHost)
+        else
         {
-            playerName = LocalStorage.GetPlayerName();
+            playerName = await LocalStorage.GetPlayerNameAsync();
+            playerId = await LocalStorage.GetPlayerIdAsync();
+
+            if (!string.IsNullOrWhiteSpace(currentSessionId))
+                joinSessionInput = currentSessionId;
         }
 
         await RefreshPlayers();
 
-        pollTimer = new System.Threading.Timer(async _ =>
-        {
-            await InvokeAsync(async () =>
+        pollTimer = new System.Threading.Timer(
+            async _ =>
             {
-                await RefreshPlayers();
-                StateHasChanged();
-            });
-        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+                await InvokeAsync(async () =>
+                {
+                    await RefreshPlayers();
+                    StateHasChanged();
+                });
+            },
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(2));
     }
 
     private async Task JoinAsPlayer()
     {
-        if (string.IsNullOrWhiteSpace(playerName) || string.IsNullOrWhiteSpace(joinSessionInput)) return;
+        message = "";
 
-        var created = await GameSessionService.JoinSessionAsync(joinSessionInput.Trim(), new Player { Name = playerName.Trim() });
-        if (created == null) return;
-
-        LocalStorage.SetPlayerId(created.Id);
-        LocalStorage.SetPlayerName(created.Name);
-        LocalStorage.SetCurrentSessionId(joinSessionInput.Trim());
-        currentSessionId = joinSessionInput.Trim();
-
-        var session = await GameSessionService.GetSessionAsync(currentSessionId);
-        if (session?.Characters != null)
+        if (string.IsNullOrWhiteSpace(playerName))
         {
-            LocalStorage.SavePlayerCharacters(session.Characters);
+            message = "Du skal indtaste dit navn.";
+            return;
         }
 
+        if (string.IsNullOrWhiteSpace(joinSessionInput))
+        {
+            message = "Du skal indtaste et session ID.";
+            return;
+        }
+
+        var existingPlayerId = await LocalStorage.GetPlayerIdAsync();
+
+        var created = await GameSessionService.JoinSessionAsync(
+            joinSessionInput.Trim(),
+            new Player
+            {
+                Id = existingPlayerId,
+                Name = playerName.Trim()
+            });
+
+        if (created == null)
+        {
+            message = GameSessionService.LastError;
+            return;
+        }
+
+        await LocalStorage.SetPlayerIdAsync(created.Id);
+        await LocalStorage.SetPlayerNameAsync(created.Name);
+        await LocalStorage.SetCurrentSessionIdAsync(joinSessionInput.Trim());
+
+        playerId = created.Id;
+        playerName = created.Name;
+        currentSessionId = joinSessionInput.Trim();
+
+        var session =
+            await GameSessionService.GetSessionAsync(currentSessionId);
+
+        if (session?.Characters != null)
+        {
+            await LocalStorage.SavePlayerCharactersAsync(
+                session.Characters.Select(CloneCharacter).ToList());
+        }
+
+        message = "Du er joinet spillet.";
         await RefreshPlayers();
     }
 
     private async Task RefreshPlayers()
     {
-        if (string.IsNullOrEmpty(currentSessionId)) return;
+        if (string.IsNullOrEmpty(currentSessionId))
+            return;
 
-        var session = await GameSessionService.GetSessionAsync(currentSessionId);
-        if (session == null) return;
+        var session =
+            await GameSessionService.GetSessionAsync(currentSessionId);
+
+        if (session == null)
+        {
+            pollTimer?.Dispose();
+
+            await LocalStorage.ClearPlayerSessionDataAsync();
+            await LocalStorage.SetNavigationMessageAsync(
+                "Sessionen findes ikke længere.");
+
+            Navigation.NavigateTo("/");
+            return;
+        }
 
         players = session.Players ?? new();
+
+        if (!isHost && !string.IsNullOrWhiteSpace(playerId))
+        {
+            var stillInSession =
+                players.Any(player => player.Id == playerId);
+
+            if (!stillInSession)
+            {
+                pollTimer?.Dispose();
+
+                await LocalStorage.ClearPlayerSessionDataAsync();
+                await LocalStorage.SetNavigationMessageAsync(
+                    "Du er blevet fjernet fra lobbyen af hosten.");
+
+                Navigation.NavigateTo("/");
+                return;
+            }
+        }
 
         if (!isHost && session.State == GameState.Running)
         {
             Navigation.NavigateTo("/gameviewer");
+            return;
+        }
+
+        if (isHost && session.State == GameState.Running)
+        {
+            Navigation.NavigateTo("/gameviewer-host");
+            return;
+        }
+
+        if (session.State == GameState.Finished)
+        {
+            Navigation.NavigateTo(isHost ? "/gameviewer-host" : "/gameviewer");
         }
     }
 
     private async Task StartGame()
     {
-        await GameSessionService.StartSessionAsync(currentSessionId);
+        message = "";
+
+        var success =
+            await GameSessionService.StartSessionAsync(currentSessionId);
+
+        if (!success)
+        {
+            message = GameSessionService.LastError;
+            return;
+        }
+
         Navigation.NavigateTo("/gameviewer-host");
     }
 
-    private async Task RemovePlayer(string playerId)
+    private async Task RemovePlayer(string playerIdToRemove)
     {
-        // Kræver et backend endpoint for rigtig fjernelse. UI'en refresher stadig listen.
+        message = "";
+
+        var success =
+            await GameSessionService.RemovePlayerAsync(
+                currentSessionId,
+                playerIdToRemove);
+
+        if (!success)
+        {
+            message = GameSessionService.LastError;
+            return;
+        }
+
         await RefreshPlayers();
     }
 
-    private void LeaveGame()
+    private async Task LeaveGame()
     {
-        LocalStorage.ClearSessionData();
+        await LocalStorage.ClearSessionDataAsync();
         Navigation.NavigateTo("/");
     }
 
-    private string GetInitial(string name) => string.IsNullOrWhiteSpace(name) ? "?" : name.Trim()[0].ToString().ToUpper();
+    private static Character CloneCharacter(Character character)
+    {
+        return new Character
+        {
+            Id = character.Id,
+            Name = character.Name,
+            Description = character.Description,
+
+            BaseStats = new BaseStats
+            {
+                TjenesteMotivation = character.BaseStats.TjenesteMotivation,
+                Stress = character.BaseStats.Stress,
+                Sociallyst = character.BaseStats.Sociallyst,
+                Tillid = character.BaseStats.Tillid
+            },
+
+            CurrentStats = new CurrentStats
+            {
+                TjenesteMotivation = character.CurrentStats.TjenesteMotivation,
+                Stress = character.CurrentStats.Stress,
+                Sociallyst = character.CurrentStats.Sociallyst,
+                Tillid = character.CurrentStats.Tillid
+            }
+        };
+    }
+
+    private static string GetInitial(string name)
+    {
+        return string.IsNullOrWhiteSpace(name)
+            ? "?"
+            : name.Trim()[0].ToString().ToUpper();
+    }
 
     public void Dispose()
     {

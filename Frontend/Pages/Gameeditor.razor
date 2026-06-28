@@ -12,17 +12,20 @@
 <PageTitle>Game Editor - LeadingByLead</PageTitle>
 
 <main class="editor-page">
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <section class="status-card warning">
+            @errorMessage
+        </section>
+    }
+
     @if (string.IsNullOrEmpty(currentSessionId))
     {
         <section class="editor-hero">
             <div>
                 <span class="eyebrow">Host panel</span>
                 <h1>Byg dit spil</h1>
-
-                <p>
-                    Vælg de spørgsmål og characters, der skal indgå,
-                    eller opret nye direkte fra editoren.
-                </p>
+                <p>Vælg de spørgsmål og characters, der skal indgå.</p>
             </div>
 
             <button class="ghost-button" @onclick="GoHome">
@@ -38,8 +41,7 @@
                         <h2>Alle spørgsmål</h2>
                     </div>
 
-                    <button class="primary-button"
-                            @onclick="() => OpenQuestionModal(null)">
+                    <button class="primary-button" @onclick="() => OpenQuestionModal(null)">
                         + Opret spørgsmål
                     </button>
                 </header>
@@ -51,64 +53,49 @@
 
                 @if (allQuestions == null)
                 {
-                    <div class="empty-state">
-                        Henter spørgsmål...
-                    </div>
+                    <div class="empty-state">Henter spørgsmål...</div>
                 }
                 else if (allQuestions.Count == 0)
                 {
-                    <div class="empty-state">
-                        Ingen spørgsmål endnu. Opret det første spørgsmål.
-                    </div>
+                    <div class="empty-state">Ingen spørgsmål endnu.</div>
                 }
                 else
                 {
                     <div class="item-list">
-                        @foreach (var questionItem in allQuestions
-                            .Select((value, index) => new { value, index }))
+                        @foreach (var questionItem in allQuestions.Select((value, index) => new { value, index }))
                         {
                             var question = questionItem.value;
-
-                            var selected = selectedQuestions.Any(
-                                selectedQuestion =>
-                                    selectedQuestion.Id == question.Id);
+                            var selected = selectedQuestions.Any(x => x.Id == question.Id);
 
                             <div class="list-card @(selected ? "is-selected" : "")">
-                                <span class="list-number">
-                                    @(questionItem.index + 1)
-                                </span>
+                                <span class="list-number">@(questionItem.index + 1)</span>
 
                                 <label class="select-zone">
                                     <input type="checkbox"
                                            checked="@selected"
-                                           @onchange="eventArgs =>
-                                               ToggleQuestion(
-                                                   question,
-                                                   (bool)eventArgs.Value!)" />
-
+                                           @onchange="eventArgs => ToggleQuestion(question, (bool)eventArgs.Value!)" />
                                     <span class="check-ui"></span>
                                 </label>
 
-                                <div class="item-main"
-                                     @onclick="() =>
-                                         ToggleQuestion(question, !selected)">
+                                <div class="item-main" @onclick="() => ToggleQuestion(question, !selected)">
                                     <h3>@question.Text</h3>
-
                                     <p>
-                                        @question.AnswerOptions.Count svarmuligheder
+                                        @question.AnswerOptions.Count svarmuligheder —
+                                        vælg @question.RequiredSelections
                                     </p>
+
+                                    @if (!IsQuestionValid(question, out var warning))
+                                    {
+                                        <small class="warning-text">@warning</small>
+                                    }
                                 </div>
 
                                 <div class="item-actions">
-                                    <button class="small-button blue"
-                                            @onclick="() =>
-                                                OpenQuestionModal(question)">
+                                    <button class="small-button blue" @onclick="() => OpenQuestionModal(question)">
                                         Rediger
                                     </button>
 
-                                    <button class="small-button red"
-                                            @onclick="() =>
-                                                DeleteQuestion(question.Id)">
+                                    <button class="small-button red" @onclick="() => DeleteQuestion(question.Id)">
                                         Slet
                                     </button>
                                 </div>
@@ -125,8 +112,7 @@
                         <h2>Alle characters</h2>
                     </div>
 
-                    <button class="primary-button"
-                            @onclick="() => OpenCharacterModal(null)">
+                    <button class="primary-button" @onclick="() => OpenCharacterModal(null)">
                         + Opret character
                     </button>
                 </header>
@@ -138,84 +124,46 @@
 
                 @if (allCharacters == null)
                 {
-                    <div class="empty-state">
-                        Henter characters...
-                    </div>
+                    <div class="empty-state">Henter characters...</div>
                 }
                 else if (allCharacters.Count == 0)
                 {
-                    <div class="empty-state">
-                        Ingen characters endnu. Opret den første character.
-                    </div>
+                    <div class="empty-state">Ingen characters endnu.</div>
                 }
                 else
                 {
                     <div class="item-list">
-                        @foreach (var characterItem in allCharacters
-                            .Select((value, index) => new { value, index }))
+                        @foreach (var characterItem in allCharacters.Select((value, index) => new { value, index }))
                         {
                             var character = characterItem.value;
-
-                            var selected = selectedCharacters.Any(
-                                selectedCharacter =>
-                                    selectedCharacter.Id == character.Id);
+                            var selected = selectedCharacters.Any(x => x.Id == character.Id);
 
                             <div class="list-card @(selected ? "is-selected" : "")">
-                                <span class="list-number">
-                                    @(characterItem.index + 1)
-                                </span>
+                                <span class="list-number">@(characterItem.index + 1)</span>
 
                                 <label class="select-zone">
                                     <input type="checkbox"
                                            checked="@selected"
-                                           @onchange="eventArgs =>
-                                               ToggleCharacter(
-                                                   character,
-                                                   (bool)eventArgs.Value!)" />
-
+                                           @onchange="eventArgs => ToggleCharacter(character, (bool)eventArgs.Value!)" />
                                     <span class="check-ui"></span>
                                 </label>
 
-                                <div class="item-main"
-                                     @onclick="() =>
-                                         ToggleCharacter(character, !selected)">
+                                <div class="item-main" @onclick="() => ToggleCharacter(character, !selected)">
                                     <h3>@character.Name</h3>
-
                                     <p>@character.Description</p>
 
-                                    <div class="stat-chips">
-                                        <span>
-                                            Motivation
-                                            @character.BaseStats.TjenesteMotivation
-                                        </span>
-
-                                        <span>
-                                            Stress
-                                            @character.BaseStats.Stress
-                                        </span>
-
-                                        <span>
-                                            Social
-                                            @character.BaseStats.Sociallyst
-                                        </span>
-
-                                        <span>
-                                            Tillid
-                                            @character.BaseStats.Tillid
-                                        </span>
-                                    </div>
+                                    @if (!IsCharacterValid(character, out var warning))
+                                    {
+                                        <small class="warning-text">@warning</small>
+                                    }
                                 </div>
 
                                 <div class="item-actions">
-                                    <button class="small-button blue"
-                                            @onclick="() =>
-                                                OpenCharacterModal(character)">
+                                    <button class="small-button blue" @onclick="() => OpenCharacterModal(character)">
                                         Rediger
                                     </button>
 
-                                    <button class="small-button red"
-                                            @onclick="() =>
-                                                DeleteCharacter(character.Id)">
+                                    <button class="small-button red" @onclick="() => DeleteCharacter(character.Id)">
                                         Slet
                                     </button>
                                 </div>
@@ -236,9 +184,7 @@
 
             <button class="start-button"
                     @onclick="CreateGame"
-                    disabled="@(
-                        selectedCharacters.Count == 0 ||
-                        selectedQuestions.Count == 0)">
+                    disabled="@(selectedCharacters.Count == 0 || selectedQuestions.Count == 0)">
                 Opret spil
             </button>
         </section>
@@ -247,19 +193,13 @@
     {
         <section class="created-screen">
             <div class="created-card">
-                <span class="eyebrow created-eyebrow">
-                    Spillet er klar
-                </span>
+                <span class="eyebrow created-eyebrow">Spillet er klar</span>
 
                 <h1>Spil oprettet</h1>
 
-                <p>
-                    Spillerne skal bruge denne kode for at deltage:
-                </p>
+                <p>Spillerne skal bruge denne kode:</p>
 
-                <div class="session-code">
-                    @currentSessionId
-                </div>
+                <div class="session-code">@currentSessionId</div>
 
                 <div class="created-meta">
                     <span>@selectedQuestions.Count spørgsmål</span>
@@ -270,21 +210,16 @@
                     <header class="participant-header">
                         <div>
                             <span>Deltagere</span>
-
-                            <strong>
-                                @(activeSession?.Players?.Count ?? 0)
-                            </strong>
+                            <strong>@(activeSession?.Players?.Count ?? 0)</strong>
                         </div>
 
                         <small>Opdateres automatisk</small>
                     </header>
 
-                    @if (activeSession?.Players == null ||
-                         activeSession.Players.Count == 0)
+                    @if (activeSession?.Players == null || activeSession.Players.Count == 0)
                     {
                         <div class="participant-empty">
-                            Ingen deltagere endnu. Venter på at spillerne
-                            tilmelder sig...
+                            Ingen deltagere endnu.
                         </div>
                     }
                     else
@@ -292,17 +227,10 @@
                         <div class="participant-list">
                             @foreach (var player in activeSession.Players)
                             {
-                                <div class="participant-row"
-                                     @key="player.Id">
-                                    <span class="participant-icon">
-                                        @GetPlayerInitial(player.Name)
-                                    </span>
-
+                                <div class="participant-row" @key="player.Id">
+                                    <span class="participant-icon">@GetPlayerInitial(player.Name)</span>
                                     <strong>@player.Name</strong>
-
-                                    <span class="participant-status">
-                                        Klar
-                                    </span>
+                                    <span class="participant-status">Klar</span>
                                 </div>
                             }
                         </div>
@@ -310,8 +238,7 @@
                 </section>
 
                 <button class="start-button full"
-                        @onclick="GoToWaitingArea"
-                        disabled="@(activeSession?.Players?.Count == 0)">
+                        @onclick="GoToWaitingArea">
                     Gå til venteområde →
                 </button>
             </div>
@@ -323,7 +250,6 @@
                 VisibleChanged="@(async value =>
                 {
                     showCharacterModal = value;
-
                     if (!value)
                         await RefreshLists();
                 })"
@@ -333,7 +259,6 @@
                VisibleChanged="@(async value =>
                {
                    showQuestionModal = value;
-
                    if (!value)
                        await RefreshLists();
                })"
@@ -341,6 +266,8 @@
                Characters="@(allCharacters ?? new List<Character>())" />
 
 @code {
+    private const string FixedSessionId = "1";
+
     private List<Character>? allCharacters;
     private List<Question>? allQuestions;
 
@@ -348,6 +275,7 @@
     private List<Question> selectedQuestions = new();
 
     private string currentSessionId = "";
+    private string errorMessage = "";
 
     private GameSession? activeSession;
     private System.Threading.Timer? participantTimer;
@@ -360,13 +288,34 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (LocalStorage.GetPlayerRole() != "Host")
+        if (await LocalStorage.GetPlayerRoleAsync() != "Host")
         {
             Navigation.NavigateTo("/");
             return;
         }
 
-        currentSessionId = LocalStorage.GetCurrentSessionId();
+        var existingSession =
+            await GameSessionService.GetSessionAsync(FixedSessionId);
+
+        if (existingSession != null)
+        {
+            await LocalStorage.SetCurrentSessionIdAsync(FixedSessionId);
+
+            if (existingSession.State == GameState.Lobby)
+            {
+                Navigation.NavigateTo("/waiting-area");
+                return;
+            }
+
+            if (existingSession.State == GameState.Running ||
+                existingSession.State == GameState.Finished)
+            {
+                Navigation.NavigateTo("/gameviewer-host");
+                return;
+            }
+        }
+
+        currentSessionId = await LocalStorage.GetCurrentSessionIdAsync();
 
         await RefreshLists();
 
@@ -381,28 +330,22 @@
     {
         try
         {
-            allCharacters =
-                await CharacterService.GetAllCharactersAsync();
-
-            allQuestions =
-                await QuestionService.GetAllQuestionsAsync();
+            allCharacters = await CharacterService.GetAllCharactersAsync();
+            allQuestions = await QuestionService.GetAllQuestionsAsync();
 
             selectedCharacters = selectedCharacters
-                .Where(selected =>
-                    allCharacters.Any(character =>
-                        character.Id == selected.Id))
+                .Where(selected => allCharacters.Any(character => character.Id == selected.Id))
                 .ToList();
 
             selectedQuestions = selectedQuestions
-                .Where(selected =>
-                    allQuestions.Any(question =>
-                        question.Id == selected.Id))
+                .Where(selected => allQuestions.Any(question => question.Id == selected.Id))
                 .ToList();
 
             StateHasChanged();
         }
         catch
         {
+            errorMessage = "Listerne kunne ikke hentes.";
         }
     }
 
@@ -424,6 +367,7 @@
         editingQuestion = question == null
             ? new Question
             {
+                RequiredSelections = 1,
                 AnswerOptions = new List<AnswerOption>()
             }
             : CloneQuestion(question);
@@ -453,89 +397,150 @@
         await RefreshLists();
     }
 
-    private void ToggleCharacter(
-        Character character,
-        bool isChecked)
+    private void ToggleCharacter(Character character, bool isChecked)
     {
-        if (isChecked &&
-            selectedCharacters.All(item => item.Id != character.Id))
-        {
+        if (isChecked && selectedCharacters.All(item => item.Id != character.Id))
             selectedCharacters.Add(character);
-        }
 
         if (!isChecked)
-        {
-            selectedCharacters = selectedCharacters
-                .Where(item => item.Id != character.Id)
-                .ToList();
-        }
+            selectedCharacters = selectedCharacters.Where(item => item.Id != character.Id).ToList();
     }
 
-    private void ToggleQuestion(
-        Question question,
-        bool isChecked)
+    private void ToggleQuestion(Question question, bool isChecked)
     {
-        if (isChecked &&
-            selectedQuestions.All(item => item.Id != question.Id))
-        {
+        if (isChecked && selectedQuestions.All(item => item.Id != question.Id))
             selectedQuestions.Add(question);
-        }
 
         if (!isChecked)
-        {
-            selectedQuestions = selectedQuestions
-                .Where(item => item.Id != question.Id)
-                .ToList();
-        }
+            selectedQuestions = selectedQuestions.Where(item => item.Id != question.Id).ToList();
     }
 
     private async Task CreateGame()
     {
-        if (selectedCharacters.Count == 0 ||
-            selectedQuestions.Count == 0)
-        {
+        errorMessage = "";
+
+        if (!ValidateSelectedContent())
             return;
-        }
+
+        await GameSessionService.DeleteSessionAsync(FixedSessionId);
 
         var session = new GameSession
         {
+            Id = FixedSessionId,
+
             Host = new Player
             {
                 Name = "Host",
                 Role = PlayerRole.Host
             },
 
-            Characters = selectedCharacters
-                .Select(CloneCharacter)
-                .ToList(),
-
-            Questions = selectedQuestions
-                .Select(CloneQuestion)
-                .ToList(),
+            Characters = selectedCharacters.Select(CloneCharacter).ToList(),
+            Questions = selectedQuestions.Select(CloneQuestion).ToList(),
 
             State = GameState.Lobby,
             Players = new List<Player>(),
-            CurrentQuestionIndex = 0
+            PlayerStates = new List<PlayerState>(),
+            CurrentQuestionIndex = 0,
+            QuestionPhase = QuestionPhase.Answering
         };
 
-        var created =
-            await GameSessionService.CreateSessionAsync(session);
+        var created = await GameSessionService.CreateSessionAsync(session);
 
-        if (created == null ||
-            string.IsNullOrWhiteSpace(created.Id))
+        if (created == null || string.IsNullOrWhiteSpace(created.Id))
         {
+            errorMessage = GameSessionService.LastError;
             return;
         }
 
         currentSessionId = created.Id;
         activeSession = created;
 
-        LocalStorage.SetCurrentSessionId(created.Id);
-
-        LocalStorage.SavePlayerCharacters(
-            created.Characters);
+        await LocalStorage.SetCurrentSessionIdAsync(created.Id);
 
         StartParticipantPolling();
+    }
+
+    private bool ValidateSelectedContent()
+    {
+        if (selectedCharacters.Count == 0)
+        {
+            errorMessage = "Du skal vælge mindst én character.";
+            return false;
+        }
+
+        if (selectedQuestions.Count == 0)
+        {
+            errorMessage = "Du skal vælge mindst ét spørgsmål.";
+            return false;
+        }
+
+        foreach (var character in selectedCharacters)
+        {
+            if (!IsCharacterValid(character, out var warning))
+            {
+                errorMessage = $"{character.Name}: {warning}";
+                return false;
+            }
+        }
+
+        foreach (var question in selectedQuestions)
+        {
+            if (!IsQuestionValid(question, out var warning))
+            {
+                errorMessage = $"{question.Text}: {warning}";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsCharacterValid(Character character, out string warning)
+    {
+        if (string.IsNullOrWhiteSpace(character.Name))
+        {
+            warning = "Character mangler navn.";
+            return false;
+        }
+
+        warning = "";
+        return true;
+    }
+
+    private static bool IsQuestionValid(Question question, out string warning)
+    {
+        if (string.IsNullOrWhiteSpace(question.Text))
+        {
+            warning = "Spørgsmålet mangler tekst.";
+            return false;
+        }
+
+        if (question.AnswerOptions.Count < 2)
+        {
+            warning = "Spørgsmålet skal have mindst 2 svarmuligheder.";
+            return false;
+        }
+
+        if (question.RequiredSelections < 1)
+        {
+            warning = "RequiredSelections skal være mindst 1.";
+            return false;
+        }
+
+        if (question.RequiredSelections > question.AnswerOptions.Count)
+        {
+            warning = "Man kan ikke kræve flere valg end der findes svarmuligheder.";
+            return false;
+        }
+
+        if (question.AnswerOptions.Any(answer => string.IsNullOrWhiteSpace(answer.Text)))
+        {
+            warning = "En eller flere svarmuligheder mangler tekst.";
+            return false;
+        }
+
+        warning = "";
+        return true;
     }
 
     private void StartParticipantPolling()
@@ -563,31 +568,26 @@
 
         try
         {
-            activeSession =
-                await GameSessionService.GetSessionAsync(
-                    currentSessionId);
+            activeSession = await GameSessionService.GetSessionAsync(currentSessionId);
 
             if (activeSession == null)
             {
                 participantTimer?.Dispose();
                 currentSessionId = "";
-
-                LocalStorage.SetCurrentSessionId("");
+                await LocalStorage.SetCurrentSessionIdAsync("");
+                errorMessage = "Sessionen findes ikke længere.";
             }
         }
         catch
         {
-            // Den senest hentede session beholdes ved midlertidige fejl.
+            errorMessage = "Sessionen kunne ikke opdateres.";
         }
     }
 
     private static Character CloneCharacter(Character character)
     {
-        var baseStats =
-            character.BaseStats ?? new BaseStats();
-
-        var currentStats =
-            character.CurrentStats ?? new CurrentStats();
+        var baseStats = character.BaseStats ?? new BaseStats();
+        var currentStats = character.CurrentStats ?? new CurrentStats();
 
         return new Character
         {
@@ -597,32 +597,18 @@
 
             BaseStats = new BaseStats
             {
-                TjenesteMotivation =
-                    baseStats.TjenesteMotivation,
-
-                Stress =
-                    baseStats.Stress,
-
-                Sociallyst =
-                    baseStats.Sociallyst,
-
-                Tillid =
-                    baseStats.Tillid
+                TjenesteMotivation = baseStats.TjenesteMotivation,
+                Stress = baseStats.Stress,
+                Sociallyst = baseStats.Sociallyst,
+                Tillid = baseStats.Tillid
             },
 
             CurrentStats = new CurrentStats
             {
-                TjenesteMotivation =
-                    currentStats.TjenesteMotivation,
-
-                Stress =
-                    currentStats.Stress,
-
-                Sociallyst =
-                    currentStats.Sociallyst,
-
-                Tillid =
-                    currentStats.Tillid
+                TjenesteMotivation = currentStats.TjenesteMotivation,
+                Stress = currentStats.Stress,
+                Sociallyst = currentStats.Sociallyst,
+                Tillid = currentStats.Tillid
             }
         };
     }
@@ -634,6 +620,7 @@
             Id = question.Id,
             Text = question.Text,
             RequiredSelections = question.RequiredSelections,
+
             AnswerOptions = question.AnswerOptions?
                 .Select(option => new AnswerOption
                 {
@@ -664,9 +651,7 @@
         if (string.IsNullOrWhiteSpace(name))
             return "?";
 
-        return name.Trim()[0]
-            .ToString()
-            .ToUpperInvariant();
+        return name.Trim()[0].ToString().ToUpperInvariant();
     }
 
     private void GoToWaitingArea()
@@ -675,10 +660,10 @@
         Navigation.NavigateTo("/waiting-area");
     }
 
-    private void GoHome()
+    private async Task GoHome()
     {
         participantTimer?.Dispose();
-        LocalStorage.ClearAll();
+        await LocalStorage.ClearAllAsync();
         Navigation.NavigateTo("/");
     }
 

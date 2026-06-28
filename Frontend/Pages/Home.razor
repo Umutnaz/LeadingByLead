@@ -1,7 +1,10 @@
 @page "/"
+@using Core
 @using Frontend.Services
+@using Frontend.Services.IService
 @inject NavigationManager Navigation
 @inject LocalStorageService LocalStorage
+@inject IGameSessionService GameSessionService
 
 <PageTitle>LeadingByLead - Hjem</PageTitle>
 
@@ -9,34 +12,123 @@
     <section class="home-shell">
         <div class="brand-pill">Fører spillet</div>
         <h1>Vælg din rolle</h1>
-        <p class="home-subtitle">Et Kahoot-inspireret ledelsesspil, hvor valg påvirker gruppens motivation, stress, sociallyst og tillid.</p>
 
-        <div class="role-grid">
-            <button class="role-card host-card" @onclick="SelectHost">
-                <span class="role-icon">🎮</span>
-                <span class="role-title">Host</span>
-                <span class="role-text">Opret spørgsmål, characters og start spillet.</span>
-            </button>
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div class="status-card warning">
+                @message
+            </div>
+        }
 
-            <button class="role-card player-card" @onclick="SelectPlayer">
-                <span class="role-icon">👥</span>
-                <span class="role-title">Player</span>
-                <span class="role-text">Deltag med session ID og svar på scenarier.</span>
-            </button>
-        </div>
+        @if (existingSession != null && showHostRecovery)
+        {
+            <div class="status-card info">
+                <h2>Der findes allerede et spil</h2>
+                <p>Session 1 er i status: <strong>@existingSession.State</strong></p>
+
+                <button class="start-button full" @onclick="ContinueAsHost">
+                    Fortsæt eksisterende spil
+                </button>
+
+                <button class="secondary-button full" @onclick="DeleteAndCreateNew">
+                    Slet og opret nyt spil
+                </button>
+            </div>
+        }
+        else
+        {
+            <p class="home-subtitle">
+                Et Kahoot-inspireret ledelsesspil, hvor valg påvirker gruppens motivation,
+                stress, sociallyst og tillid.
+            </p>
+
+            <div class="role-grid">
+                <button class="role-card host-card" @onclick="SelectHost">
+                    <span class="role-icon">🎮</span>
+                    <span class="role-title">Host</span>
+                    <span class="role-text">Opret spørgsmål, characters og start spillet.</span>
+                </button>
+
+                <button class="role-card player-card" @onclick="SelectPlayer">
+                    <span class="role-icon">👥</span>
+                    <span class="role-title">Player</span>
+                    <span class="role-text">Deltag med session ID og svar på scenarier.</span>
+                </button>
+            </div>
+        }
     </section>
 </main>
 
 @code {
-    private void SelectHost()
+    private const string FixedSessionId = "1";
+
+    private GameSession? existingSession;
+    private bool showHostRecovery;
+    private string message = "";
+
+    protected override async Task OnInitializedAsync()
     {
-        LocalStorage.SetPlayerRole("Host");
+        message = await LocalStorage.TakeNavigationMessageAsync();
+    }
+
+    private async Task SelectHost()
+    {
+        await LocalStorage.SetPlayerRoleAsync("Host");
+
+        existingSession =
+            await GameSessionService.GetSessionAsync(FixedSessionId);
+
+        if (existingSession == null)
+        {
+            await LocalStorage.SetCurrentSessionIdAsync("");
+            Navigation.NavigateTo("/gameeditor");
+            return;
+        }
+
+        showHostRecovery = true;
+    }
+
+    private async Task ContinueAsHost()
+    {
+        if (existingSession == null)
+            return;
+
+        await LocalStorage.SetPlayerRoleAsync("Host");
+        await LocalStorage.SetCurrentSessionIdAsync(FixedSessionId);
+
+        NavigateHostBySessionState(existingSession);
+    }
+
+    private async Task DeleteAndCreateNew()
+    {
+        await GameSessionService.DeleteSessionAsync(FixedSessionId);
+        await LocalStorage.ClearAllAsync();
+        await LocalStorage.SetPlayerRoleAsync("Host");
+
         Navigation.NavigateTo("/gameeditor");
     }
 
-    private void SelectPlayer()
+    private async Task SelectPlayer()
     {
-        LocalStorage.SetPlayerRole("Player");
+        await LocalStorage.SetPlayerRoleAsync("Player");
         Navigation.NavigateTo("/waiting-area");
+    }
+
+    private void NavigateHostBySessionState(GameSession session)
+    {
+        if (session.State == GameState.Lobby)
+        {
+            Navigation.NavigateTo("/waiting-area");
+            return;
+        }
+
+        if (session.State == GameState.Running ||
+            session.State == GameState.Finished)
+        {
+            Navigation.NavigateTo("/gameviewer-host");
+            return;
+        }
+
+        Navigation.NavigateTo("/gameeditor");
     }
 }

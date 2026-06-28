@@ -1,172 +1,324 @@
-﻿using Core;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Core;
+using Microsoft.JSInterop;
 
 namespace Frontend.Services;
 
 public class LocalStorageService
 {
-    private const string PlayerPrefix = "lbl_player";
-    private const string SessionPrefix = "lbl_session";
-    private const string CharactersPrefix = "lbl_characters";
+    private const string PlayerRoleKey = "lbl_player_role";
+    private const string PlayerNameKey = "lbl_player_name";
+    private const string PlayerIdKey = "lbl_player_id";
+    private const string CurrentSessionKey = "lbl_session_current";
+    private const string NavigationMessageKey = "lbl_navigation_message";
+
+    private readonly IJSRuntime _jsRuntime;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    private static readonly Dictionary<string, string> Storage = new();
-
-    public void SetPlayerRole(string role)
+    public LocalStorageService(IJSRuntime jsRuntime)
     {
-        SetItem($"{PlayerPrefix}_role", role);
+        _jsRuntime = jsRuntime;
     }
 
-    public string GetPlayerRole()
+    public Task SetPlayerRoleAsync(string role)
     {
-        return GetItem($"{PlayerPrefix}_role") ?? "";
+        return SetItemAsync(PlayerRoleKey, role);
     }
 
-    public void SetPlayerName(string name)
+    public async Task<string> GetPlayerRoleAsync()
     {
-        SetItem($"{PlayerPrefix}_name", name);
+        return await GetItemAsync(PlayerRoleKey) ?? "";
     }
 
-    public string GetPlayerName()
+    public Task SetPlayerNameAsync(string name)
     {
-        return GetItem($"{PlayerPrefix}_name") ?? "";
+        return SetItemAsync(PlayerNameKey, name);
     }
 
-    public void SetPlayerId(string id)
+    public async Task<string> GetPlayerNameAsync()
     {
-        SetItem($"{PlayerPrefix}_id", id);
+        return await GetItemAsync(PlayerNameKey) ?? "";
     }
 
-    public string GetPlayerId()
+    public Task SetPlayerIdAsync(string id)
     {
-        return GetItem($"{PlayerPrefix}_id") ?? "";
+        return SetItemAsync(PlayerIdKey, id);
     }
 
-    public void SetCurrentSessionId(string sessionId)
+    public async Task<string> GetPlayerIdAsync()
     {
-        SetItem($"{SessionPrefix}_current", sessionId);
+        return await GetItemAsync(PlayerIdKey) ?? "";
     }
 
-    public string GetCurrentSessionId()
+    public Task SetCurrentSessionIdAsync(string sessionId)
     {
-        return GetItem($"{SessionPrefix}_current") ?? "";
+        return SetItemAsync(CurrentSessionKey, sessionId);
     }
 
-    public void SavePlayerCharacters(List<Character> characters)
+    public async Task<string> GetCurrentSessionIdAsync()
     {
-        var sessionId = GetCurrentSessionId();
-        var playerId = GetPlayerId();
-        var key = $"{CharactersPrefix}_{sessionId}_{playerId}";
-
-        SetItem(key, JsonSerializer.Serialize(characters, JsonOptions));
+        return await GetItemAsync(CurrentSessionKey) ?? "";
     }
 
-    public List<Character> GetPlayerCharacters()
+    public Task SetNavigationMessageAsync(string message)
     {
-        var sessionId = GetCurrentSessionId();
-        var playerId = GetPlayerId();
-        var key = $"{CharactersPrefix}_{sessionId}_{playerId}";
-        var json = GetItem(key);
+        return SetItemAsync(NavigationMessageKey, message);
+    }
 
-        if (string.IsNullOrEmpty(json)) return new List<Character>();
+    public async Task<string> TakeNavigationMessageAsync()
+    {
+        var message =
+            await GetItemAsync(NavigationMessageKey) ?? "";
+
+        await RemoveItemAsync(NavigationMessageKey);
+
+        return message;
+    }
+
+    public async Task SavePlayerCharactersAsync(
+        List<Character> characters)
+    {
+        var key = await GetCharacterStorageKeyAsync();
+
+        var json = JsonSerializer.Serialize(
+            characters,
+            JsonOptions);
+
+        await SetItemAsync(key, json);
+    }
+
+    public async Task<List<Character>> GetPlayerCharactersAsync()
+    {
+        var key = await GetCharacterStorageKeyAsync();
+        var json = await GetItemAsync(key);
+
+        if (string.IsNullOrWhiteSpace(json))
+            return new List<Character>();
 
         try
         {
-            return JsonSerializer.Deserialize<List<Character>>(json, JsonOptions) ?? new List<Character>();
+            return JsonSerializer.Deserialize<List<Character>>(
+                       json,
+                       JsonOptions) ??
+                   new List<Character>();
         }
         catch
         {
+            await RemoveItemAsync(key);
             return new List<Character>();
         }
     }
 
-    public void AddAnsweredQuestion(string questionId, string answerId)
+    public async Task AddAnsweredQuestionAsync(
+        string questionId,
+        IEnumerable<string> answerIds)
     {
-        var sessionId = GetCurrentSessionId();
-        var playerId = GetPlayerId();
-        var key = $"{SessionPrefix}_{sessionId}_{playerId}_answers";
+        var key = await GetAnswerStorageKeyAsync();
 
-        var answers = GetAnsweredQuestions();
-        answers[questionId] = answerId;
+        var answers = await GetAnsweredQuestionsAsync();
 
-        SetItem(key, JsonSerializer.Serialize(answers, JsonOptions));
+        answers[questionId] = answerIds.ToList();
+
+        var json = JsonSerializer.Serialize(
+            answers,
+            JsonOptions);
+
+        await SetItemAsync(key, json);
     }
 
-    public Dictionary<string, string> GetAnsweredQuestions()
+    public async Task<Dictionary<string, List<string>>>
+        GetAnsweredQuestionsAsync()
     {
-        var sessionId = GetCurrentSessionId();
-        var playerId = GetPlayerId();
-        var key = $"{SessionPrefix}_{sessionId}_{playerId}_answers";
-        var json = GetItem(key);
+        var key = await GetAnswerStorageKeyAsync();
+        var json = await GetItemAsync(key);
 
-        if (string.IsNullOrEmpty(json)) return new Dictionary<string, string>();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new Dictionary<string, List<string>>();
+        }
 
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions)
-                   ?? new Dictionary<string, string>();
+            return JsonSerializer.Deserialize<
+                       Dictionary<string, List<string>>>(
+                       json,
+                       JsonOptions) ??
+                   new Dictionary<string, List<string>>();
         }
         catch
         {
-            return new Dictionary<string, string>();
+            await RemoveItemAsync(key);
+
+            return new Dictionary<string, List<string>>();
         }
     }
 
-    public void SetCurrentQuestionIndex(int index)
+    public async Task SetCurrentQuestionIndexAsync(int index)
     {
-        var sessionId = GetCurrentSessionId();
-        var playerId = GetPlayerId();
-        var key = $"{SessionPrefix}_{sessionId}_{playerId}_qindex";
+        var key = await GetQuestionIndexStorageKeyAsync();
 
-        SetItem(key, index.ToString());
+        await SetItemAsync(
+            key,
+            index.ToString());
     }
 
-    public int GetCurrentQuestionIndex()
+    public async Task<int> GetCurrentQuestionIndexAsync()
     {
-        var sessionId = GetCurrentSessionId();
-        var playerId = GetPlayerId();
-        var key = $"{SessionPrefix}_{sessionId}_{playerId}_qindex";
-        var value = GetItem(key);
+        var key = await GetQuestionIndexStorageKeyAsync();
+        var value = await GetItemAsync(key);
 
-        if (int.TryParse(value, out var index)) return index;
-
-        return 0;
+        return int.TryParse(value, out var index)
+            ? index
+            : 0;
     }
 
-    public void ClearSessionData()
+    public async Task ClearPlayerSessionDataAsync()
     {
-        var sessionId = GetCurrentSessionId();
-        var playerId = GetPlayerId();
+        var sessionId = await GetCurrentSessionIdAsync();
+        var playerId = await GetPlayerIdAsync();
 
-        RemoveItem($"{SessionPrefix}_current");
-        RemoveItem($"{CharactersPrefix}_{sessionId}_{playerId}");
-        RemoveItem($"{SessionPrefix}_{sessionId}_{playerId}_answers");
-        RemoveItem($"{SessionPrefix}_{sessionId}_{playerId}_qindex");
+        if (!string.IsNullOrWhiteSpace(sessionId) &&
+            !string.IsNullOrWhiteSpace(playerId))
+        {
+            await RemoveItemAsync(
+                GetCharacterStorageKey(
+                    sessionId,
+                    playerId));
+
+            await RemoveItemAsync(
+                GetAnswerStorageKey(
+                    sessionId,
+                    playerId));
+
+            await RemoveItemAsync(
+                GetQuestionIndexStorageKey(
+                    sessionId,
+                    playerId));
+        }
+
+        await RemoveItemAsync(CurrentSessionKey);
+        await RemoveItemAsync(PlayerIdKey);
+        await RemoveItemAsync(PlayerNameKey);
     }
 
-    public void ClearAll()
+    public async Task ClearSessionDataAsync()
     {
-        Storage.Clear();
+        var sessionId = await GetCurrentSessionIdAsync();
+        var playerId = await GetPlayerIdAsync();
+
+        if (!string.IsNullOrWhiteSpace(sessionId) &&
+            !string.IsNullOrWhiteSpace(playerId))
+        {
+            await RemoveItemAsync(
+                GetCharacterStorageKey(
+                    sessionId,
+                    playerId));
+
+            await RemoveItemAsync(
+                GetAnswerStorageKey(
+                    sessionId,
+                    playerId));
+
+            await RemoveItemAsync(
+                GetQuestionIndexStorageKey(
+                    sessionId,
+                    playerId));
+        }
+
+        await RemoveItemAsync(CurrentSessionKey);
     }
 
-    private static void SetItem(string key, string value)
+    public async Task ClearAllAsync()
     {
-        Storage[key] = value;
+        await _jsRuntime.InvokeVoidAsync(
+            "localStorage.clear");
     }
 
-    private static string? GetItem(string key)
+    public async Task<bool> HasPlayerIdentityAsync()
     {
-        if (Storage.ContainsKey(key)) return Storage[key];
+        var playerId = await GetPlayerIdAsync();
+        var playerName = await GetPlayerNameAsync();
 
-        return null;
+        return !string.IsNullOrWhiteSpace(playerId) &&
+               !string.IsNullOrWhiteSpace(playerName);
     }
 
-    private static void RemoveItem(string key)
+    private async Task<string> GetCharacterStorageKeyAsync()
     {
-        Storage.Remove(key);
+        var sessionId = await GetCurrentSessionIdAsync();
+        var playerId = await GetPlayerIdAsync();
+
+        return GetCharacterStorageKey(
+            sessionId,
+            playerId);
+    }
+
+    private async Task<string> GetAnswerStorageKeyAsync()
+    {
+        var sessionId = await GetCurrentSessionIdAsync();
+        var playerId = await GetPlayerIdAsync();
+
+        return GetAnswerStorageKey(
+            sessionId,
+            playerId);
+    }
+
+    private async Task<string> GetQuestionIndexStorageKeyAsync()
+    {
+        var sessionId = await GetCurrentSessionIdAsync();
+        var playerId = await GetPlayerIdAsync();
+
+        return GetQuestionIndexStorageKey(
+            sessionId,
+            playerId);
+    }
+
+    private static string GetCharacterStorageKey(
+        string sessionId,
+        string playerId)
+    {
+        return $"lbl_characters_{sessionId}_{playerId}";
+    }
+
+    private static string GetAnswerStorageKey(
+        string sessionId,
+        string playerId)
+    {
+        return $"lbl_session_{sessionId}_{playerId}_answers";
+    }
+
+    private static string GetQuestionIndexStorageKey(
+        string sessionId,
+        string playerId)
+    {
+        return $"lbl_session_{sessionId}_{playerId}_qindex";
+    }
+
+    private async Task SetItemAsync(
+        string key,
+        string value)
+    {
+        await _jsRuntime.InvokeVoidAsync(
+            "localStorage.setItem",
+            key,
+            value);
+    }
+
+    private async Task<string?> GetItemAsync(string key)
+    {
+        return await _jsRuntime.InvokeAsync<string?>(
+            "localStorage.getItem",
+            key);
+    }
+
+    private async Task RemoveItemAsync(string key)
+    {
+        await _jsRuntime.InvokeVoidAsync(
+            "localStorage.removeItem",
+            key);
     }
 }

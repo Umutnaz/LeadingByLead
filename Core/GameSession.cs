@@ -2,7 +2,7 @@
 
 public class GameSession
 {
-    public string Id { get; set; } = "";
+    public string Id { get; set; } = "1";
 
     public Player Host { get; set; } = new();
 

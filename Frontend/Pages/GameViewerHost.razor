@@ -1,3 +1,4 @@
+@page "/gameviewer-host"
 @page "/GameViewerHost"
 @using Frontend.Services
 @using Frontend.Services.IService
@@ -10,6 +11,13 @@
 <PageTitle>Host Panel - LeadingByLead</PageTitle>
 
 <main class="host-page">
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <section class="status-card warning">
+            @message
+        </section>
+    }
+
     @if (session == null)
     {
         <section class="status-card">
@@ -23,8 +31,33 @@
             <span>🎉</span>
             <h1>Spillet er færdigt</h1>
 
-            <button @onclick="EndGame">
-                Afslut og slet spil
+            <p>Samlet status</p>
+
+            @if (latestStateByPlayer.Count == 0)
+            {
+                <div class="status-card">
+                    Ingen spillerresultater fundet.
+                </div>
+            }
+            else
+            {
+                <div class="player-result-list">
+                    @foreach (var item in latestStateByPlayer)
+                    {
+                        <article class="player-result-card">
+                            <h3>@item.Name</h3>
+                            <strong>@FormatNumber(CalculateGroupAverage(item))</strong>
+                        </article>
+                    }
+                </div>
+            }
+
+            <button @onclick="DeleteAndGoHome">
+                Slet spil
+            </button>
+
+            <button @onclick="StartNewGame">
+                Start nyt spil
             </button>
         </section>
     }
@@ -35,25 +68,42 @@
                 <div>
                     <span class="eyebrow">Resultater</span>
 
-                    <h1>
-                        Spørgsmål @(session.CurrentQuestionIndex + 1)
-                    </h1>
+                    <h1>Spørgsmål @(session.CurrentQuestionIndex + 1)</h1>
 
                     <p>@currentQuestion?.Text</p>
                 </div>
 
                 <div class="host-actions">
-                    <button class="next-button"
-                            @onclick="NextQuestion">
-                        Næste spørgsmål
+                    <button class="next-button" @onclick="NextQuestion">
+                        @(session.CurrentQuestionIndex + 1 >= session.Questions.Count
+                            ? "Afslut spil"
+                            : "Næste spørgsmål")
                     </button>
 
-                    <button class="end-button"
-                            @onclick="EndGame">
+                    <button class="end-button" @onclick="FinishGame">
                         Afslut
                     </button>
                 </div>
             </header>
+
+            <section class="panel">
+                <div class="panel-title-row">
+                    <h2>Status på spillere</h2>
+                    <span>@GetAnsweredPlayerCount() / @session.Players.Count har svaret</span>
+                </div>
+
+                <div class="score-table">
+                    @foreach (var player in session.Players)
+                    {
+                        var state = GetCurrentStateForPlayer(player.Id);
+
+                        <div class="score-row @(state == null ? "empty" : "")">
+                            <span class="player-name">@player.Name</span>
+                            <strong>@(state == null ? "Har ikke svaret" : "Har svaret")</strong>
+                        </div>
+                    }
+                </div>
+            </section>
 
             <section class="panel">
                 <div class="panel-title-row">
@@ -84,9 +134,7 @@
                                     @foreach (var result in state.LatestResults)
                                     {
                                         <section class="host-character-result">
-                                            <strong>
-                                                @result.CharacterName
-                                            </strong>
+                                            <strong>@result.CharacterName</strong>
 
                                             @if (!HasAnyDifference(result))
                                             {
@@ -95,25 +143,10 @@
                                             else
                                             {
                                                 <div class="host-change-list">
-                                                    @ResultRow(
-                                                        "Motivation",
-                                                        result.Before.TjenesteMotivation,
-                                                        result.After.TjenesteMotivation)
-
-                                                    @ResultRow(
-                                                        "Stress",
-                                                        result.Before.Stress,
-                                                        result.After.Stress)
-
-                                                    @ResultRow(
-                                                        "Social",
-                                                        result.Before.Sociallyst,
-                                                        result.After.Sociallyst)
-
-                                                    @ResultRow(
-                                                        "Tillid",
-                                                        result.Before.Tillid,
-                                                        result.After.Tillid)
+                                                    @ResultRow("Motivation", result.Before.TjenesteMotivation, result.After.TjenesteMotivation)
+                                                    @ResultRow("Stress", result.Before.Stress, result.After.Stress)
+                                                    @ResultRow("Social", result.Before.Sociallyst, result.After.Sociallyst)
+                                                    @ResultRow("Tillid", result.Before.Tillid, result.After.Tillid)
                                                 </div>
                                             }
                                         </section>
@@ -134,9 +167,7 @@
                     <span class="eyebrow">Host live</span>
 
                     <h1>
-                        Spørgsmål
-                        @(session.CurrentQuestionIndex + 1)
-                        /
+                        Spørgsmål @(session.CurrentQuestionIndex + 1) /
                         @session.Questions.Count
                     </h1>
 
@@ -145,12 +176,20 @@
 
                 <div class="host-actions">
                     <button class="next-button"
-                            @onclick="ShowResults">
+                            @onclick="ShowResults"
+                            disabled="@(session.Players.Count == 0)">
                         Vis resultater
                     </button>
 
-                    <button class="end-button"
-                            @onclick="EndGame">
+                    @if (GetAnsweredPlayerCount() < session.Players.Count)
+                    {
+                        <small>
+                            Ikke alle har svaret:
+                            @GetAnsweredPlayerCount() / @session.Players.Count
+                        </small>
+                    }
+
+                    <button class="end-button" @onclick="FinishGame">
                         Afslut
                     </button>
                 </div>
@@ -161,32 +200,22 @@
                     <h2>Svarmuligheder</h2>
 
                     <p>
-                        Spillerne skal vælge
-                        @currentQuestion?.RequiredSelections.
+                        Spillerne skal vælge @currentQuestion?.RequiredSelections.
                     </p>
 
                     <div class="answer-list">
                         @if (currentQuestion != null)
                         {
-                            @foreach (var option in
-                                currentQuestion.AnswerOptions
-                                    .Select((value, index) =>
-                                        new { value, index }))
+                            @foreach (var option in currentQuestion.AnswerOptions.Select((value, index) => new { value, index }))
                             {
                                 <div class="answer-card answer-@option.index">
-                                    <span>
-                                        @GetAnswerIcon(option.index)
-                                    </span>
+                                    <span>@GetAnswerIcon(option.index)</span>
 
                                     <div>
-                                        <strong>
-                                            @option.value.Text
-                                        </strong>
+                                        <strong>@option.value.Text</strong>
 
                                         <small>
-                                            @option.value.CharacterEffects.Sum(
-                                                effect =>
-                                                    effect.Changes.Count)
+                                            @option.value.CharacterEffects.Sum(effect => effect.Changes.Count)
                                             påvirkninger
                                         </small>
                                     </div>
@@ -201,29 +230,18 @@
                         <h2>Indsendte svar</h2>
 
                         <span>
-                            @GetAnsweredPlayerCount()
-                            /
-                            @session.Players.Count
+                            @GetAnsweredPlayerCount() / @session.Players.Count
                         </span>
                     </div>
 
                     <div class="score-table">
                         @foreach (var player in session.Players)
                         {
-                            var answered = playerStates.Any(
-                                state =>
-                                    state.PlayerId == player.Id &&
-                                    state.CurrentQuestionIndex ==
-                                    session.CurrentQuestionIndex);
+                            var answered = GetCurrentStateForPlayer(player.Id) != null;
 
-                            <div class="score-row empty">
-                                <span class="player-name">
-                                    @player.Name
-                                </span>
-
-                                <strong>
-                                    @(answered ? "Har svaret" : "Venter")
-                                </strong>
+                            <div class="score-row @(answered ? "" : "empty")">
+                                <span class="player-name">@player.Name</span>
+                                <strong>@(answered ? "Har svaret" : "Venter")</strong>
                             </div>
                         }
                     </div>
@@ -234,29 +252,47 @@
 </main>
 
 @code {
+    private const string FixedSessionId = "1";
+
     private GameSession? session;
     private Question? currentQuestion;
 
     private List<PlayerState> playerStates = new();
+    private List<PlayerState> allPlayerStates = new();
+    private List<PlayerState> latestStateByPlayer = new();
+
+    private string sessionId = FixedSessionId;
+    private string message = "";
+
+    private bool confirmShowResults;
 
     private System.Threading.Timer? pollTimer;
 
     protected override async Task OnInitializedAsync()
     {
-        if (LocalStorage.GetPlayerRole() != "Host")
+        if (await LocalStorage.GetPlayerRoleAsync() != "Host")
         {
             Navigation.NavigateTo("/");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(
-            LocalStorage.GetCurrentSessionId()))
-        {
-            Navigation.NavigateTo("/gameeditor");
-            return;
-        }
+        sessionId = await LocalStorage.GetCurrentSessionIdAsync();
+
+        if (string.IsNullOrWhiteSpace(sessionId))
+            sessionId = FixedSessionId;
+
+        await LocalStorage.SetCurrentSessionIdAsync(sessionId);
 
         await RefreshSession();
+
+        if (session == null)
+        {
+            await LocalStorage.SetNavigationMessageAsync(
+                "Der findes ingen aktiv host-session.");
+
+            Navigation.NavigateTo("/");
+            return;
+        }
 
         pollTimer = new System.Threading.Timer(
             async _ =>
@@ -274,11 +310,7 @@
 
     private async Task RefreshSession()
     {
-        var sessionId =
-            LocalStorage.GetCurrentSessionId();
-
-        session =
-            await GameSessionService.GetSessionAsync(sessionId);
+        session = await GameSessionService.GetSessionAsync(sessionId);
 
         if (session == null)
             return;
@@ -288,14 +320,33 @@
                 ? session.Questions[session.CurrentQuestionIndex]
                 : null;
 
-        var allStates =
+        allPlayerStates =
             await GameSessionService.GetPlayerStatesAsync(sessionId);
 
-        playerStates = allStates
+        playerStates = allPlayerStates
             .Where(state =>
                 state.CurrentQuestionIndex ==
                 session.CurrentQuestionIndex)
             .ToList();
+
+        latestStateByPlayer = session.Players
+            .Select(player =>
+                allPlayerStates
+                    .Where(state => state.PlayerId == player.Id)
+                    .OrderByDescending(state => state.CurrentQuestionIndex)
+                    .FirstOrDefault())
+            .Where(state => state != null)
+            .Cast<PlayerState>()
+            .ToList();
+    }
+
+    private PlayerState? GetCurrentStateForPlayer(string playerId)
+    {
+        return playerStates.FirstOrDefault(
+            state =>
+                state.PlayerId == playerId &&
+                state.CurrentQuestionIndex ==
+                session?.CurrentQuestionIndex);
     }
 
     private int GetAnsweredPlayerCount()
@@ -304,62 +355,105 @@
             return 0;
 
         return session.Players.Count(player =>
-            playerStates.Any(state =>
-                state.PlayerId == player.Id &&
-                state.CurrentQuestionIndex ==
-                session.CurrentQuestionIndex));
+            GetCurrentStateForPlayer(player.Id) != null);
     }
 
     private async Task ShowResults()
     {
+        message = "";
+
         if (session == null)
             return;
 
-        await GameSessionService.AdvanceQuestionAsync(
-            LocalStorage.GetCurrentSessionId());
+        if (GetAnsweredPlayerCount() < session.Players.Count)
+        {
+            message =
+                $"Ikke alle har svaret endnu: {GetAnsweredPlayerCount()} / {session.Players.Count}. " +
+                "Tryk igen hvis du stadig vil vise resultater.";
+
+            if (!confirmShowResults)
+            {
+                confirmShowResults = true;
+                return;
+            }
+        }
+
+        confirmShowResults = false;
+
+        var success =
+            await GameSessionService.AdvanceQuestionAsync(sessionId);
+
+        if (!success)
+        {
+            message = GameSessionService.LastError;
+            return;
+        }
 
         await RefreshSession();
     }
 
     private async Task NextQuestion()
     {
+        message = "";
+
         if (session == null)
             return;
 
-        await GameSessionService.AdvanceQuestionAsync(
-            LocalStorage.GetCurrentSessionId());
+        var success =
+            await GameSessionService.AdvanceQuestionAsync(sessionId);
+
+        if (!success)
+        {
+            message = GameSessionService.LastError;
+            return;
+        }
 
         await RefreshSession();
     }
 
-    private async Task EndGame()
+    private async Task FinishGame()
     {
-        var sessionId =
-            LocalStorage.GetCurrentSessionId();
+        message = "";
 
-        await GameSessionService.FinishSessionAsync(sessionId);
+        var success =
+            await GameSessionService.FinishSessionAsync(sessionId);
+
+        if (!success)
+        {
+            message = GameSessionService.LastError;
+            return;
+        }
+
+        await RefreshSession();
+    }
+
+    private async Task DeleteAndGoHome()
+    {
         await GameSessionService.DeleteSessionAsync(sessionId);
-
-        LocalStorage.ClearAll();
+        await LocalStorage.ClearAllAsync();
 
         Navigation.NavigateTo("/");
     }
 
-    private static bool HasAnyDifference(
-        CharacterResult result)
+    private async Task StartNewGame()
+    {
+        await GameSessionService.DeleteSessionAsync(sessionId);
+        await LocalStorage.ClearAllAsync();
+        await LocalStorage.SetPlayerRoleAsync("Host");
+
+        Navigation.NavigateTo("/gameeditor");
+    }
+
+    private static bool HasAnyDifference(CharacterResult result)
     {
         return
-            result.Before.TjenesteMotivation !=
-            result.After.TjenesteMotivation ||
+            result.Before.TjenesteMotivation != result.After.TjenesteMotivation ||
             result.Before.Stress != result.After.Stress ||
             result.Before.Sociallyst != result.After.Sociallyst ||
             result.Before.Tillid != result.After.Tillid;
     }
 
-    private RenderFragment ResultRow(
-        string label,
-        int before,
-        int after)
+    private RenderFragment ResultRow(string label, int before, int after)
     {
         if (before == after)
             return @<text></text>;
@@ -374,6 +468,26 @@
         </div>;
     }
 
+    private static double CalculateGroupAverage(PlayerState state)
+    {
+        if (state.Characters.Count == 0)
+            return 0;
+
+        var motivation = state.Characters.Average(
+            item => item.CurrentStats.TjenesteMotivation);
+
+        var stress = state.Characters.Average(
+            item => item.CurrentStats.Stress);
+
+        var social = state.Characters.Average(
+            item => item.CurrentStats.Sociallyst);
+
+        var trust = state.Characters.Average(
+            item => item.CurrentStats.Tillid);
+
+        return (motivation + (100 - stress) + social + trust) / 4;
+    }
+
     private static string GetAnswerIcon(int index)
     {
         return index switch
@@ -384,6 +498,11 @@
             3 => "■",
             _ => "★"
         };
+    }
+
+    private static string FormatNumber(double value)
+    {
+        return ((int)Math.Round(value)).ToString();
     }
 
     public void Dispose()

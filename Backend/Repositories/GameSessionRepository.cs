@@ -15,26 +15,12 @@ public class GameSessionRepository : IGameSessionRepository
 
     public async Task<GameSession> CreateAsync(GameSession session)
     {
-        var existingSessions = await _collection
-            .Find(_ => true)
-            .ToListAsync();
+        session.Id = "1";
 
-        var usedIds = existingSessions
-            .Select(existing =>
-                int.TryParse(existing.Id, out var id)
-                    ? id
-                    : 0)
-            .Where(id => id > 0)
-            .ToHashSet();
-
-        var nextId = 1;
-
-        while (usedIds.Contains(nextId))
-            nextId++;
-
-        session.Id = nextId.ToString();
-
-        await _collection.InsertOneAsync(session);
+        await _collection.ReplaceOneAsync(
+            existing => existing.Id == "1",
+            session,
+            new ReplaceOptions { IsUpsert = true });
 
         return session;
     }
@@ -57,6 +43,8 @@ public class GameSessionRepository : IGameSessionRepository
         string id,
         GameSession session)
     {
+        session.Id = id;
+
         await _collection.ReplaceOneAsync(
             existing => existing.Id == id,
             session);
@@ -79,24 +67,17 @@ public class GameSessionRepository : IGameSessionRepository
                 player));
     }
 
-    public async Task AdvanceQuestionAsync(string sessionId)
-    {
-        await _collection.UpdateOneAsync(
-            session => session.Id == sessionId,
-            Builders<GameSession>.Update.Inc(
-                session => session.CurrentQuestionIndex,
-                1));
-    }
-
-    public async Task SetStateAsync(
+    public async Task RemovePlayerAsync(
         string sessionId,
-        GameState state)
+        string playerId)
     {
         await _collection.UpdateOneAsync(
             session => session.Id == sessionId,
-            Builders<GameSession>.Update.Set(
-                session => session.State,
-                state));
+            Builders<GameSession>.Update.PullFilter(
+                session => session.Players,
+                Builders<Player>.Filter.Eq(
+                    player => player.Id,
+                    playerId)));
     }
 
     public async Task PostPlayerStateAsync(
@@ -110,7 +91,9 @@ public class GameSessionRepository : IGameSessionRepository
 
         var existing = session.PlayerStates.FirstOrDefault(
             playerState =>
-                playerState.PlayerId == state.PlayerId);
+                playerState.PlayerId == state.PlayerId &&
+                playerState.CurrentQuestionIndex ==
+                state.CurrentQuestionIndex);
 
         if (existing != null)
             session.PlayerStates.Remove(existing);
