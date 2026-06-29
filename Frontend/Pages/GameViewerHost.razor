@@ -52,13 +52,15 @@
                 </div>
             }
 
-            <button @onclick="DeleteAndGoHome">
-                Slet spil
-            </button>
+            <div class="finished-actions">
+                <button class="secondary-button" @onclick="DeleteAndGoHome">
+                    Slet spil
+                </button>
 
-            <button @onclick="StartNewGame">
-                Start nyt spil
-            </button>
+                <button class="primary-button" @onclick="StartNewGame">
+                    Start nyt spil
+                </button>
+            </div>
         </section>
     }
     else if (session.QuestionPhase == QuestionPhase.Results)
@@ -85,7 +87,32 @@
                     </button>
                 </div>
             </header>
+            <section class="host-result-overview">
+                <article class="summary-card overall-summary">
+                    <span>Samlet gennemsnit</span>
+                    <strong>@FormatNumber(CalculateAllGroupsAverage())</strong>
+                    <small>
+                        Baseret på @playerStates.Count grupper
+                    </small>
+                </article>
 
+                <div class="group-average-grid">
+                    @foreach (var state in playerStates
+                                  .OrderByDescending(CalculateGroupAverage))
+                    {
+                        <article class="group-average-card">
+                            <div>
+                                <span>Gruppe</span>
+                                <h3>@state.Name</h3>
+                            </div>
+
+                            <strong>
+                                @FormatNumber(CalculateGroupAverage(state))
+                            </strong>
+                        </article>
+                    }
+                </div>
+            </section>
             <section class="panel">
                 <div class="panel-title-row">
                     <h2>Status på spillere</h2>
@@ -123,7 +150,19 @@
                         @foreach (var state in playerStates)
                         {
                             <article class="player-result-card">
-                                <h3>@state.Name</h3>
+                                <header class="player-result-header">
+                                    <div>
+                                        <span>Gruppe</span>
+                                        <h3>@state.Name</h3>
+                                    </div>
+
+                                    <div class="player-group-score">
+                                        <span>Gennemsnit</span>
+                                        <strong>
+                                            @FormatNumber(CalculateGroupAverage(state))
+                                        </strong>
+                                    </div>
+                                </header>
 
                                 @if (state.LatestResults.Count == 0)
                                 {
@@ -501,5 +540,16 @@
     public void Dispose()
     {
         pollTimer?.Dispose();
+    }
+
+    private double CalculateAllGroupsAverage()
+    {
+        var validStates = playerStates
+            .Where(state => state.Characters.Count > 0)
+            .ToList();
+
+        return validStates.Count == 0
+            ? 0
+            : validStates.Average(CalculateGroupAverage);
     }
 }

@@ -33,7 +33,7 @@
 
             <strong>@FormatNumber(CalculateGroupAverage())</strong>
 
-            <button @onclick="GoHome">
+            <button class="primary-button result-action-button" @onclick="GoHome">
                 Gå hjem
             </button>
         </section>
@@ -51,7 +51,21 @@
                 <span class="result-kicker">Dit resultat</span>
 
                 <h1>Sådan blev din gruppe påvirket</h1>
+                <div class="result-summary-grid">
+                    <article class="summary-card personal-summary">
+                        <span>Din gruppe</span>
+                        <strong>@FormatNumber(CalculateGroupAverage())</strong>
+                        <small>Efter dette spørgsmål</small>
+                    </article>
 
+                    <article class="summary-card overall-summary">
+                        <span>Alle grupper</span>
+                        <strong>@FormatNumber(CalculateAllGroupsAverage())</strong>
+                        <small>
+                            Gennemsnit af @currentQuestionStates.Count grupper
+                        </small>
+                    </article>
+                </div>
                 @if (latestResults.Count == 0)
                 {
                     <div class="no-results">
@@ -189,6 +203,7 @@
 
     private List<Character> playerCharacters = new();
     private List<CharacterResult> latestResults = new();
+    private List<PlayerState> currentQuestionStates = new();
     private HashSet<string> selectedAnswerIds = new();
 
     private bool hasAnswered;
@@ -318,11 +333,14 @@
         var states =
             await GameSessionService.GetPlayerStatesAsync(sessionId);
 
-        var ownState = states.FirstOrDefault(
-            state =>
-                state.PlayerId == playerId &&
+        currentQuestionStates = states
+            .Where(state =>
                 state.CurrentQuestionIndex ==
-                session?.CurrentQuestionIndex);
+                session?.CurrentQuestionIndex)
+            .ToList();
+
+        var ownState = currentQuestionStates.FirstOrDefault(
+            state => state.PlayerId == playerId);
 
         if (ownState == null)
             return;
@@ -612,5 +630,40 @@
     public void Dispose()
     {
         pollTimer?.Dispose();
+    }
+    private static double CalculateStateGroupAverage(PlayerState state)
+    {
+        if (state.Characters.Count == 0)
+            return 0;
+
+        var motivation = state.Characters
+            .Average(character => character.CurrentStats.TjenesteMotivation);
+
+        var stress = state.Characters
+            .Average(character => character.CurrentStats.Stress);
+
+        var social = state.Characters
+            .Average(character => character.CurrentStats.Sociallyst);
+
+        var trust = state.Characters
+            .Average(character => character.CurrentStats.Tillid);
+
+        return (
+            motivation +
+            (100 - stress) +
+            social +
+            trust
+        ) / 4;
+    }
+
+    private double CalculateAllGroupsAverage()
+    {
+        var validStates = currentQuestionStates
+            .Where(state => state.Characters.Count > 0)
+            .ToList();
+
+        return validStates.Count == 0
+            ? 0
+            : validStates.Average(CalculateStateGroupAverage);
     }
 }
