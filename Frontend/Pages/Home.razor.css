@@ -1,5 +1,7 @@
 .home-page, .waiting-page, .editor-page, .game-page, .host-page {
     min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: clamp(1rem, 2.6vw, 2rem);
     background:
         radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 32rem),
@@ -61,7 +63,7 @@
 
 .role-card, .editor-panel, .lobby-card, .question-card, .stats-panel, .panel, .created-card, .result-card, .player-result-card {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
     background: linear-gradient(145deg, rgba(30, 41, 59, 0.78), rgba(15, 23, 42, 0.92)), var(--bg-card);
@@ -403,6 +405,15 @@
 .score-row.empty strong { color: var(--yellow); }
 
 @media (max-width: 1050px) {
+    .home-page, .waiting-page, .game-page, .host-page {
+        padding: 0.85rem;
+    }
+
+    .home-shell {
+        min-height: auto;
+        padding: 2rem 0;
+    }
+
     .game-layout, .host-grid, .editor-grid, .role-grid, .lobby-grid, .answer-grid {
         grid-template-columns: 1fr;
     }
@@ -412,11 +423,65 @@
         flex-direction: column;
     }
 
-    .list-card { grid-template-columns: auto 1fr; }
+    .stats-panel {
+        order: -1;
+    }
+
+    .answer-button {
+        min-height: 130px;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .answer-shape {
+        width: fit-content;
+        min-width: 4.6rem;
+        height: auto;
+        min-height: 2.4rem;
+        padding: 0.45rem 0.7rem;
+    }
+
+    .list-card {
+        grid-template-columns: auto 1fr;
+    }
 
     .item-actions {
         grid-column: 1 / -1;
         display: flex;
         gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .player-cloud {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 620px) {
+    .home-page, .waiting-page, .game-page, .host-page {
+        padding: 0.65rem;
+    }
+
+    .home-shell h1, .waiting-header h1, .question-card h1, .host-header h1 {
+        font-size: clamp(2rem, 12vw, 3rem);
+    }
+
+    .role-card, .lobby-card, .question-card, .stats-panel, .panel, .result-card, .player-result-card {
+        border-radius: 16px;
+        padding: 0.9rem;
+    }
+
+    .panel-header, .players-head, .panel-title-row, .participant-header, .question-topline {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .change-row, .host-change-row {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+
+    .finished-card {
+        margin: 1rem auto;
     }
 }
