@@ -1,19 +1,23 @@
-using DotNetEnv;
 using Backend.Repositories;
 using Backend.Services;
-using Microsoft.Extensions.DependencyInjection;
+using DotNetEnv;
 using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load .env file (if present) so Environment.GetEnvironmentVariable can read values from it
-Env.Load();
+// Brug kun lokal .env-fil, hvis den faktisk eksisterer.
+// På Render bruges environment variables fra dashboardet.
+if (File.Exists(".env"))
+{
+    Env.Load();
+}
 
-// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-// Allow the frontend origin(s) - adjust ports if different
+
+// CORS bruges primært under lokal udvikling,
+// hvor frontend og backend kører på forskellige porte.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -25,84 +29,165 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Configure MongoDB - prefer environment variables (from .env or environment) but fall back to appsettings.json
-builder.Services.AddSingleton<IMongoClient>(sp =>
+// MongoDB
+builder.Services.AddSingleton<IMongoClient>(serviceProvider =>
 {
-    var cfg = sp.GetRequiredService<IConfiguration>();
-    var connFromEnv = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING");
-    var conn = !string.IsNullOrWhiteSpace(connFromEnv)
-        ? connFromEnv
-        : cfg.GetValue<string>("MongoDbSettings:ConnectionString");
+    var configuration =
+        serviceProvider.GetRequiredService<IConfiguration>();
 
-    if (string.IsNullOrWhiteSpace(conn))
+    var environmentConnectionString =
+        Environment.GetEnvironmentVariable(
+            "MONGO_CONNECTION_STRING");
+
+    var connectionString =
+        !string.IsNullOrWhiteSpace(environmentConnectionString)
+            ? environmentConnectionString
+            : configuration.GetValue<string>(
+                "MongoDbSettings:ConnectionString");
+
+    if (string.IsNullOrWhiteSpace(connectionString))
     {
-        // Default to localhost for developer convenience
-        conn = "mongodb://localhost:27017";
+        connectionString = "mongodb://localhost:27017";
     }
 
-    return new MongoClient(conn);
+    return new MongoClient(connectionString);
 });
 
-builder.Services.AddSingleton(sp =>
+builder.Services.AddSingleton(serviceProvider =>
 {
-    var cfg = sp.GetRequiredService<IConfiguration>();
-    var client = sp.GetRequiredService<IMongoClient>();
-    var dbFromEnv = Environment.GetEnvironmentVariable("MONGO_DATABASE_NAME");
-    var dbName = !string.IsNullOrWhiteSpace(dbFromEnv) ? dbFromEnv : cfg.GetValue<string>("MongoDbSettings:DatabaseName") ?? "LeadingByLeadDb";
-    return client.GetDatabase(dbName);
+    var configuration =
+        serviceProvider.GetRequiredService<IConfiguration>();
+
+    var client =
+        serviceProvider.GetRequiredService<IMongoClient>();
+
+    var environmentDatabaseName =
+        Environment.GetEnvironmentVariable(
+            "MONGO_DATABASE_NAME");
+
+    var databaseName =
+        !string.IsNullOrWhiteSpace(environmentDatabaseName)
+            ? environmentDatabaseName
+            : configuration.GetValue<string>(
+                "MongoDbSettings:DatabaseName")
+              ?? "LeadingByLeadDb";
+
+    return client.GetDatabase(databaseName);
 });
 
-// Register repositories
-builder.Services.AddScoped<ICharacterRepository, CharacterRepository>();
-builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
-builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+// Repositories
+builder.Services.AddScoped<
+    ICharacterRepository,
+    CharacterRepository>();
+
+builder.Services.AddScoped<
+    IQuestionRepository,
+    QuestionRepository>();
+
+builder.Services.AddScoped<
+    IGameSessionRepository,
+    GameSessionRepository>();
 
 var app = builder.Build();
 
-// Seed static data on startup if requested via SEED_STATIC_DATA=true in environment/.env
-var seedStaticDataEnv = Environment.GetEnvironmentVariable("SEED_STATIC_DATA");
-// Default to true in Development if not explicitly set to speed up local testing
-var seedStaticData = seedStaticDataEnv is not null && seedStaticDataEnv.Trim().ToLowerInvariant() == "true";
-if (seedStaticDataEnv is null && app.Environment.IsDevelopment()) seedStaticData = true;
+// Render sender porten gennem environment variable PORT.
+// Render kræver, at applikationen lytter på 0.0.0.0.
+var renderPort =
+    Environment.GetEnvironmentVariable("PORT");
 
-// Ensure database and collections exist (creates when missing)
-var database = app.Services.GetRequiredService<IMongoDatabase>();
-var existingCollections = await database.ListCollectionNames().ToListAsync();
-string[] required = new[] { "Characters", "Questions", "GameSessions" };
-foreach (var name in required)
+if (!string.IsNullOrWhiteSpace(renderPort))
 {
-    if (!existingCollections.Contains(name))
+    app.Urls.Add($"http://0.0.0.0:{renderPort}");
+}
+
+// Opret MongoDB collections, hvis de mangler.
+var database =
+    app.Services.GetRequiredService<IMongoDatabase>();
+
+var existingCollections =
+    await database
+        .ListCollectionNames()
+        .ToListAsync();
+
+string[] requiredCollections =
+{
+    "Characters",
+    "Questions",
+    "GameSessions"
+};
+
+foreach (var collectionName in requiredCollections)
+{
+    if (!existingCollections.Contains(collectionName))
     {
-        Console.WriteLine($"Creating missing collection: {name}");
-        await database.CreateCollectionAsync(name);
+        Console.WriteLine(
+            $"Creating missing collection: {collectionName}");
+
+        await database.CreateCollectionAsync(
+            collectionName);
     }
 }
 
-if (seedStaticData)
+// Seed-data
+var seedEnvironmentValue =
+    Environment.GetEnvironmentVariable(
+        "SEED_STATIC_DATA");
+
+var shouldSeed =
+    string.Equals(
+        seedEnvironmentValue,
+        "true",
+        StringComparison.OrdinalIgnoreCase);
+
+// Lokalt seeds databasen automatisk,
+// medmindre SEED_STATIC_DATA specifikt er sat.
+if (seedEnvironmentValue == null &&
+    app.Environment.IsDevelopment())
 {
-    Console.WriteLine("SEED_STATIC_DATA=true or Development -> running SeedData.SeedAsync...");
+    shouldSeed = true;
+}
+
+if (shouldSeed)
+{
+    Console.WriteLine(
+        "Running SeedData.SeedAsync...");
+
     await SeedData.SeedAsync(app.Services);
 }
 else
 {
-    Console.WriteLine("SEED_STATIC_DATA not set or false -> skipping seed data on startup.");
+    Console.WriteLine(
+        "Skipping static seed data.");
 }
 
-// Configure the HTTP request pipeline.
+// Swagger kun lokalt
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Frontendfiler fra Backend/wwwroot
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
-// Use CORS before controllers
 app.UseCors("AllowFrontend");
-
 app.UseAuthorization();
 
 app.MapControllers();
 
+// Render health check
+app.MapGet("/health", () =>
+{
+    return Results.Ok(new
+    {
+        status = "healthy",
+        application = "LeadingByLead"
+    });
+});
+
+// Alle Blazor-ruter sendes til index.html.
+// Det gør fx /gameeditor og /waiting-area mulige ved refresh.
+app.MapFallbackToFile("index.html");
 
 app.Run();
