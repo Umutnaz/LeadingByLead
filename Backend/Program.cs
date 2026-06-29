@@ -2,7 +2,7 @@ using Backend.Repositories;
 using Backend.Services;
 using DotNetEnv;
 using MongoDB.Driver;
-
+using Microsoft.AspNetCore.StaticFiles;
 var builder = WebApplication.CreateBuilder(args);
 
 // Load .env when it exists.
@@ -128,7 +128,18 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+
+var contentTypeProvider = new FileExtensionContentTypeProvider();
+
+contentTypeProvider.Mappings[".dat"] = "application/octet-stream";
+contentTypeProvider.Mappings[".dll"] = "application/octet-stream";
+contentTypeProvider.Mappings[".wasm"] = "application/wasm";
+contentTypeProvider.Mappings[".pdb"] = "application/octet-stream";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = contentTypeProvider
+});
 
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
