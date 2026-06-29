@@ -17,9 +17,9 @@
 }
 
 .kb-layout {
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
+    width: 100%;
+    min-height: 100vh;
+    overflow: visible;
     font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: var(--kb-light);
     color: var(--kb-dark);
@@ -31,8 +31,8 @@
 
 .kb-main {
     width: 100%;
-    height: 100%;
+    min-height: 100vh;
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
 }

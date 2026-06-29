@@ -20,16 +20,29 @@
 }
 
 * { box-sizing: border-box; }
-
 html,
-body,
-#app {
+body {
     width: 100%;
     min-height: 100%;
     margin: 0;
     padding: 0;
+}
+
+html {
+    background: var(--bg-main);
+    overflow-x: hidden;
+}
+
+body {
+    min-height: 100vh;
     overflow-x: hidden;
     overflow-y: auto;
+}
+
+#app {
+    width: 100%;
+    min-height: 100vh;
+    overflow: visible;
 }
 
 html { background: var(--bg-main); }

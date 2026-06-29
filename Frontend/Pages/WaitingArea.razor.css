@@ -1,7 +1,6 @@
 .home-page, .waiting-page, .editor-page, .game-page, .host-page {
     min-height: 100vh;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: visible;
     padding: clamp(1rem, 2.6vw, 2rem);
     background:
         radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 32rem),

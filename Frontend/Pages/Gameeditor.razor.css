@@ -1,7 +1,6 @@
 .editor-page {
     min-height: 100vh;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: visible;
     padding: 0.75rem 1.35rem;
     background:
         radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 32rem),
@@ -98,13 +97,12 @@
 
 .editor-page .item-list {
     min-height: 0;
-    overflow-y: auto;
+    overflow: visible;
     display: grid;
     gap: 0.5rem;
-    padding-right: 0.35rem;
-    max-height: calc(100vh - 16rem);
+    padding-right: 0;
+    max-height: none;
 }
-
 .editor-page .item-list::-webkit-scrollbar {
     width: 0.45rem;
 }
@@ -280,8 +278,8 @@
     }
 
     .editor-page .editor-grid {
+        width: min(1500px, 100%);
         min-height: auto;
-        grid-template-columns: 1fr;
     }
 
     .editor-page .editor-panel {
@@ -336,5 +334,14 @@
     .editor-page .primary-button,
     .editor-page .start-button {
         width: 100%;
+    }
+    .editor-page,
+    .editor-page * {
+        max-height: none;
+    }
+
+    .editor-page {
+        height: auto !important;
+        overflow-y: visible !important;
     }
 }
