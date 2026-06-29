@@ -18,8 +18,10 @@
 
 .kb-layout {
     width: 100%;
-    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
     overflow: visible;
+    touch-action: pan-y;
     font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: var(--kb-light);
     color: var(--kb-dark);
@@ -31,8 +33,10 @@
 
 .kb-main {
     width: 100%;
-    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
     margin: 0;
     padding: 0;
     overflow: visible;
+    touch-action: pan-y;
 }
