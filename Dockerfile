@@ -30,10 +30,6 @@ WORKDIR /app
 
 COPY --from=build /app/backend .
 
-# Copy .env into the runtime container.
-# This works because .env is NOT ignored by .dockerignore in this setup.
-COPY .env .env
-
 ENV ASPNETCORE_ENVIRONMENT=Production
 
 EXPOSE 10000
