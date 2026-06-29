@@ -51,6 +51,7 @@
                 <span class="result-kicker">Dit resultat</span>
 
                 <h1>Sådan blev din gruppe påvirket</h1>
+
                 <div class="result-summary-grid">
                     <article class="summary-card personal-summary">
                         <span>Din gruppe</span>
@@ -66,6 +67,7 @@
                         </small>
                     </article>
                 </div>
+
                 @if (latestResults.Count == 0)
                 {
                     <div class="no-results">
@@ -89,10 +91,25 @@
                                 else
                                 {
                                     <div class="change-list">
-                                        @ResultRow("Tjenestemotivation", result.Before.TjenesteMotivation, result.After.TjenesteMotivation)
-                                        @ResultRow("Stress", result.Before.Stress, result.After.Stress)
-                                        @ResultRow("Social lyst", result.Before.Sociallyst, result.After.Sociallyst)
-                                        @ResultRow("Tillid", result.Before.Tillid, result.After.Tillid)
+                                        @ResultRow(
+                                            "Tjenestemotivation",
+                                            result.Before.TjenesteMotivation,
+                                            result.After.TjenesteMotivation)
+
+                                        @ResultRow(
+                                            "Stress (lavt er godt)",
+                                            result.Before.Stress,
+                                            result.After.Stress)
+
+                                        @ResultRow(
+                                            "Social lyst",
+                                            result.Before.Sociallyst,
+                                            result.After.Sociallyst)
+
+                                        @ResultRow(
+                                            "Tillid",
+                                            result.Before.Tillid,
+                                            result.After.Tillid)
                                     </div>
                                 }
                             </article>
@@ -118,29 +135,52 @@
     {
         <section class="game-layout">
             <article class="question-card">
-                <div class="question-topline">
-                    <span>
-                        Spørgsmål @(session.CurrentQuestionIndex + 1) /
-                        @session.Questions.Count
+                <header class="player-question-header">
+                    <div>
+                        <span class="eyebrow">
+                            Spørgsmål @(session.CurrentQuestionIndex + 1) /
+                            @session.Questions.Count
+                        </span>
+
+                        <h1 class="question-title">
+                            @currentQuestion.Text
+                        </h1>
+                    </div>
+
+                    <span class="selection-pill">
+                        Vælg @currentQuestion.RequiredSelections
                     </span>
-
-                    <span>Vælg @currentQuestion.RequiredSelections</span>
-                </div>
-
-                <h1>@currentQuestion.Text</h1>
+                </header>
 
                 <div class="answer-grid">
-                    @for (var i = 0; i < currentQuestion.AnswerOptions.Count; i++)
+                    @for (var i = 0;
+                          i < currentQuestion.AnswerOptions.Count;
+                          i++)
                     {
                         var index = i;
-                        var answer = currentQuestion.AnswerOptions[index];
-                        var selected = selectedAnswerIds.Contains(answer.Id);
+                        var answer =
+                            currentQuestion.AnswerOptions[index];
+
+                        var selected =
+                            selectedAnswerIds.Contains(answer.Id);
 
                         <button class="answer-button answer-@index @(selected ? "selected" : "")"
                                 @onclick="() => ToggleAnswer(answer)"
                                 disabled="@hasAnswered">
-                            <span class="answer-shape">@GetAnswerIcon(index)</span>
-                            <span>@answer.Text</span>
+
+                            <span class="answer-shape">
+                                @GetAnswerIcon(index)
+                            </span>
+
+                            <span class="answer-copy">
+                                <span class="answer-label">
+                                    Svarmulighed @(index + 1)
+                                </span>
+
+                                <span class="answer-text">
+                                    @answer.Text
+                                </span>
+                            </span>
                         </button>
                     }
                 </div>
@@ -150,7 +190,9 @@
                     <button class="submit-answer-button"
                             @onclick="SubmitAnswers"
                             disabled="@(selectedAnswerIds.Count != currentQuestion.RequiredSelections)">
-                        Bekræft @selectedAnswerIds.Count / @currentQuestion.RequiredSelections
+
+                        Bekræft @selectedAnswerIds.Count /
+                        @currentQuestion.RequiredSelections
                     </button>
                 }
                 else
@@ -164,7 +206,9 @@
             <aside class="stats-panel">
                 <header>
                     <span>Din gruppe</span>
-                    <strong>@FormatNumber(CalculateGroupAverage())</strong>
+                    <strong>
+                        @FormatNumber(CalculateGroupAverage())
+                    </strong>
                 </header>
 
                 @if (playerCharacters.Count == 0)
@@ -176,18 +220,52 @@
                 else
                 {
                     <div class="stat-list">
-                        @StatBar("Motivation", GetAverageStat(c => c.CurrentStats.TjenesteMotivation), "motivation")
-                        @StatBar("Stress", GetAverageStat(c => c.CurrentStats.Stress), "stress")
-                        @StatBar("Sociallyst", GetAverageStat(c => c.CurrentStats.Sociallyst), "social")
-                        @StatBar("Tillid", GetAverageStat(c => c.CurrentStats.Tillid), "trust")
+                        @StatBar(
+                            "Motivation",
+                            GetAverageStat(
+                                character =>
+                                    character.CurrentStats
+                                        .TjenesteMotivation),
+                            "motivation")
+
+                        @StatBar(
+                            "Stress (lavt er godt)",
+                            GetAverageStat(
+                                character =>
+                                    character.CurrentStats.Stress),
+                            "stress")
+
+                        @StatBar(
+                            "Sociallyst",
+                            GetAverageStat(
+                                character =>
+                                    character.CurrentStats.Sociallyst),
+                            "social")
+
+                        @StatBar(
+                            "Tillid",
+                            GetAverageStat(
+                                character =>
+                                    character.CurrentStats.Tillid),
+                            "trust")
                     </div>
+
+                    <p class="stress-explanation">
+                        Stress tæller omvendt: jo lavere tal,
+                        desto bedre for gruppen.
+                    </p>
 
                     <div class="mini-characters">
                         @foreach (var character in playerCharacters)
                         {
                             <div>
                                 <strong>@character.Name</strong>
-                                <span>@FormatNumber(CalculateCharacterAverage(character))</span>
+
+                                <span>
+                                    @FormatNumber(
+                                        CalculateCharacterAverage(
+                                            character))
+                                </span>
                             </div>
                         }
                     </div>
@@ -224,9 +302,14 @@
             return;
         }
 
-        sessionId = await LocalStorage.GetCurrentSessionIdAsync();
-        playerId = await LocalStorage.GetPlayerIdAsync();
-        playerName = await LocalStorage.GetPlayerNameAsync();
+        sessionId =
+            await LocalStorage.GetCurrentSessionIdAsync();
+
+        playerId =
+            await LocalStorage.GetPlayerIdAsync();
+
+        playerName =
+            await LocalStorage.GetPlayerNameAsync();
 
         if (string.IsNullOrWhiteSpace(sessionId))
         {
@@ -246,7 +329,8 @@
             return;
         }
 
-        playerCharacters = await LocalStorage.GetPlayerCharactersAsync();
+        playerCharacters =
+            await LocalStorage.GetPlayerCharactersAsync();
 
         await RefreshSession();
 
@@ -266,13 +350,15 @@
 
     private async Task RefreshSession()
     {
-        session = await GameSessionService.GetSessionAsync(sessionId);
+        session =
+            await GameSessionService.GetSessionAsync(sessionId);
 
         if (session == null)
         {
             pollTimer?.Dispose();
 
             await LocalStorage.ClearPlayerSessionDataAsync();
+
             await LocalStorage.SetNavigationMessageAsync(
                 "Sessionen findes ikke længere.");
 
@@ -281,13 +367,16 @@
         }
 
         var stillInSession =
-            session.Players.Any(player => player.Id == playerId);
+            session.Players.Any(
+                player => player.Id == playerId);
 
-        if (!stillInSession && session.State != GameState.Finished)
+        if (!stillInSession &&
+            session.State != GameState.Finished)
         {
             pollTimer?.Dispose();
 
             await LocalStorage.ClearPlayerSessionDataAsync();
+
             await LocalStorage.SetNavigationMessageAsync(
                 "Du er blevet fjernet fra spillet af hosten.");
 
@@ -299,19 +388,27 @@
             session.Characters.Count > 0)
         {
             playerCharacters =
-                session.Characters.Select(CloneCharacter).ToList();
+                session.Characters
+                    .Select(CloneCharacter)
+                    .ToList();
 
-            await LocalStorage.SavePlayerCharactersAsync(playerCharacters);
+            await LocalStorage.SavePlayerCharactersAsync(
+                playerCharacters);
         }
 
         currentQuestion =
-            session.CurrentQuestionIndex < session.Questions.Count
-                ? session.Questions[session.CurrentQuestionIndex]
+            session.CurrentQuestionIndex <
+            session.Questions.Count
+                ? session.Questions[
+                    session.CurrentQuestionIndex]
                 : null;
 
-        if (lastQuestionIndex != session.CurrentQuestionIndex)
+        if (lastQuestionIndex !=
+            session.CurrentQuestionIndex)
         {
-            lastQuestionIndex = session.CurrentQuestionIndex;
+            lastQuestionIndex =
+                session.CurrentQuestionIndex;
+
             selectedAnswerIds.Clear();
             latestResults.Clear();
             hasAnswered = false;
@@ -322,7 +419,8 @@
             await RestoreOwnStateForCurrentQuestion();
         }
 
-        if (session.QuestionPhase == QuestionPhase.Results)
+        if (session.QuestionPhase ==
+            QuestionPhase.Results)
         {
             await RestoreOwnStateForCurrentQuestion();
         }
@@ -331,7 +429,8 @@
     private async Task RestoreOwnStateForCurrentQuestion()
     {
         var states =
-            await GameSessionService.GetPlayerStatesAsync(sessionId);
+            await GameSessionService
+                .GetPlayerStatesAsync(sessionId);
 
         currentQuestionStates = states
             .Where(state =>
@@ -339,8 +438,9 @@
                 session?.CurrentQuestionIndex)
             .ToList();
 
-        var ownState = currentQuestionStates.FirstOrDefault(
-            state => state.PlayerId == playerId);
+        var ownState =
+            currentQuestionStates.FirstOrDefault(
+                state => state.PlayerId == playerId);
 
         if (ownState == null)
             return;
@@ -353,19 +453,28 @@
             playerCharacters = session!.Characters
                 .Select(character =>
                 {
-                    var snapshot = ownState.Characters.FirstOrDefault(
-                        item => item.CharacterId == character.Id);
+                    var snapshot =
+                        ownState.Characters.FirstOrDefault(
+                            item =>
+                                item.CharacterId ==
+                                character.Id);
 
-                    var cloned = CloneCharacter(character);
+                    var cloned =
+                        CloneCharacter(character);
 
                     if (snapshot != null)
-                        cloned.CurrentStats = CopyStats(snapshot.CurrentStats);
+                    {
+                        cloned.CurrentStats =
+                            CopyStats(
+                                snapshot.CurrentStats);
+                    }
 
                     return cloned;
                 })
                 .ToList();
 
-            await LocalStorage.SavePlayerCharactersAsync(playerCharacters);
+            await LocalStorage.SavePlayerCharactersAsync(
+                playerCharacters);
         }
     }
 
@@ -380,8 +489,11 @@
             return;
         }
 
-        if (selectedAnswerIds.Count >= currentQuestion.RequiredSelections)
+        if (selectedAnswerIds.Count >=
+            currentQuestion.RequiredSelections)
+        {
             return;
+        }
 
         selectedAnswerIds.Add(answer.Id);
     }
@@ -392,37 +504,53 @@
 
         if (hasAnswered ||
             currentQuestion == null ||
-            selectedAnswerIds.Count != currentQuestion.RequiredSelections)
+            selectedAnswerIds.Count !=
+            currentQuestion.RequiredSelections)
         {
             return;
         }
 
         hasAnswered = true;
 
-        var before = playerCharacters.ToDictionary(
-            character => character.Id,
-            character => CopyStats(character.CurrentStats));
+        var before =
+            playerCharacters.ToDictionary(
+                character => character.Id,
+                character =>
+                    CopyStats(character.CurrentStats));
 
-        var selectedAnswers = currentQuestion.AnswerOptions
-            .Where(answer => selectedAnswerIds.Contains(answer.Id))
-            .ToList();
+        var selectedAnswers =
+            currentQuestion.AnswerOptions
+                .Where(answer =>
+                    selectedAnswerIds.Contains(answer.Id))
+                .ToList();
 
         foreach (var answer in selectedAnswers)
-            ApplyCharacterEffects(playerCharacters, answer);
+        {
+            ApplyCharacterEffects(
+                playerCharacters,
+                answer);
+        }
 
         latestResults = playerCharacters
-            .Select(character => new CharacterResult
-            {
-                CharacterId = character.Id,
-                CharacterName = character.Name,
-                Before = before.TryGetValue(character.Id, out var oldStats)
-                    ? oldStats
-                    : new CurrentStats(),
-                After = CopyStats(character.CurrentStats)
-            })
+            .Select(character =>
+                new CharacterResult
+                {
+                    CharacterId = character.Id,
+                    CharacterName = character.Name,
+
+                    Before = before.TryGetValue(
+                        character.Id,
+                        out var oldStats)
+                            ? oldStats
+                            : new CurrentStats(),
+
+                    After =
+                        CopyStats(character.CurrentStats)
+                })
             .ToList();
 
-        await LocalStorage.SavePlayerCharactersAsync(playerCharacters);
+        await LocalStorage.SavePlayerCharactersAsync(
+            playerCharacters);
 
         await LocalStorage.AddAnsweredQuestionAsync(
             currentQuestion.Id,
@@ -432,16 +560,24 @@
         {
             PlayerId = playerId,
             Name = playerName,
-            CurrentQuestionIndex = session?.CurrentQuestionIndex ?? 0,
+
+            CurrentQuestionIndex =
+                session?.CurrentQuestionIndex ?? 0,
+
             LatestQuestionId = currentQuestion.Id,
-            Characters = BuildCharacterSnapshots(),
+
+            Characters =
+                BuildCharacterSnapshots(),
+
             LatestResults = latestResults,
+
             Answers = new List<AnswerRecord>
             {
                 new()
                 {
                     QuestionId = currentQuestion.Id,
-                    AnswerIds = selectedAnswerIds.ToList()
+                    AnswerIds =
+                        selectedAnswerIds.ToList()
                 }
             }
         };
@@ -453,86 +589,144 @@
 
         if (!success)
         {
-            message = GameSessionService.LastError;
+            message =
+                GameSessionService.LastError;
+
             hasAnswered = false;
         }
     }
 
-    private static void ApplyCharacterEffects(List<Character> characters, AnswerOption option)
+    private static void ApplyCharacterEffects(
+        List<Character> characters,
+        AnswerOption option)
     {
         foreach (var effect in option.CharacterEffects)
         {
-            var character = characters.FirstOrDefault(item => item.Id == effect.CharacterId);
+            var character =
+                characters.FirstOrDefault(
+                    item =>
+                        item.Id == effect.CharacterId);
 
             if (character == null)
                 continue;
 
             foreach (var change in effect.Changes)
+            {
                 ApplyStatChange(character, change);
+            }
         }
     }
 
-    private static void ApplyStatChange(Character character, StatChange change)
+    private static void ApplyStatChange(
+        Character character,
+        StatChange change)
     {
-        var amount = Math.Clamp(change.Amount, -100, 100);
+        var amount =
+            Math.Clamp(change.Amount, -100, 100);
 
         switch (change.StatName)
         {
-            case nameof(CurrentStats.TjenesteMotivation):
-                character.CurrentStats.TjenesteMotivation =
-                    Math.Clamp(character.CurrentStats.TjenesteMotivation + amount, 0, 100);
+            case nameof(
+                CurrentStats.TjenesteMotivation):
+
+                character.CurrentStats
+                    .TjenesteMotivation =
+                    Math.Clamp(
+                        character.CurrentStats
+                            .TjenesteMotivation +
+                        amount,
+                        0,
+                        100);
+
                 break;
 
             case nameof(CurrentStats.Stress):
+
                 character.CurrentStats.Stress =
-                    Math.Clamp(character.CurrentStats.Stress + amount, 0, 100);
+                    Math.Clamp(
+                        character.CurrentStats.Stress +
+                        amount,
+                        0,
+                        100);
+
                 break;
 
             case nameof(CurrentStats.Sociallyst):
+
                 character.CurrentStats.Sociallyst =
-                    Math.Clamp(character.CurrentStats.Sociallyst + amount, 0, 100);
+                    Math.Clamp(
+                        character.CurrentStats.Sociallyst +
+                        amount,
+                        0,
+                        100);
+
                 break;
 
             case nameof(CurrentStats.Tillid):
+
                 character.CurrentStats.Tillid =
-                    Math.Clamp(character.CurrentStats.Tillid + amount, 0, 100);
+                    Math.Clamp(
+                        character.CurrentStats.Tillid +
+                        amount,
+                        0,
+                        100);
+
                 break;
         }
     }
 
-    private List<CharacterSnapshot> BuildCharacterSnapshots()
+    private List<CharacterSnapshot>
+        BuildCharacterSnapshots()
     {
         return playerCharacters
-            .Select(character => new CharacterSnapshot
-            {
-                CharacterId = character.Id,
-                Name = character.Name,
-                CurrentStats = CopyStats(character.CurrentStats)
-            })
+            .Select(character =>
+                new CharacterSnapshot
+                {
+                    CharacterId = character.Id,
+                    Name = character.Name,
+
+                    CurrentStats =
+                        CopyStats(
+                            character.CurrentStats)
+                })
             .ToList();
     }
 
-    private static CurrentStats CopyStats(CurrentStats stats)
+    private static CurrentStats CopyStats(
+        CurrentStats stats)
     {
         return new CurrentStats
         {
-            TjenesteMotivation = stats.TjenesteMotivation,
+            TjenesteMotivation =
+                stats.TjenesteMotivation,
+
             Stress = stats.Stress,
             Sociallyst = stats.Sociallyst,
             Tillid = stats.Tillid
         };
     }
 
-    private static bool HasAnyDifference(CharacterResult result)
+    private static bool HasAnyDifference(
+        CharacterResult result)
     {
         return
-            result.Before.TjenesteMotivation != result.After.TjenesteMotivation ||
-            result.Before.Stress != result.After.Stress ||
-            result.Before.Sociallyst != result.After.Sociallyst ||
-            result.Before.Tillid != result.After.Tillid;
+            result.Before.TjenesteMotivation !=
+            result.After.TjenesteMotivation ||
+
+            result.Before.Stress !=
+            result.After.Stress ||
+
+            result.Before.Sociallyst !=
+            result.After.Sociallyst ||
+
+            result.Before.Tillid !=
+            result.After.Tillid;
     }
 
-    private RenderFragment ResultRow(string label, int before, int after)
+    private RenderFragment ResultRow(
+        string label,
+        int before,
+        int after)
     {
         if (before == after)
             return @<text></text>;
@@ -547,7 +741,8 @@
         </div>;
     }
 
-    private double GetAverageStat(Func<Character, int> selector)
+    private double GetAverageStat(
+        Func<Character, int> selector)
     {
         return playerCharacters.Count == 0
             ? 0
@@ -559,30 +754,51 @@
         if (playerCharacters.Count == 0)
             return 0;
 
-        return (
-            GetAverageStat(c => c.CurrentStats.TjenesteMotivation) +
-            (100 - GetAverageStat(c => c.CurrentStats.Stress)) +
-            GetAverageStat(c => c.CurrentStats.Sociallyst) +
-            GetAverageStat(c => c.CurrentStats.Tillid)
+        return
+        (
+            GetAverageStat(character =>
+                character.CurrentStats
+                    .TjenesteMotivation) +
+
+            (100 - GetAverageStat(character =>
+                character.CurrentStats.Stress)) +
+
+            GetAverageStat(character =>
+                character.CurrentStats.Sociallyst) +
+
+            GetAverageStat(character =>
+                character.CurrentStats.Tillid)
         ) / 4;
     }
 
-    private static double CalculateCharacterAverage(Character character)
+    private static double CalculateCharacterAverage(
+        Character character)
     {
-        return (
-            character.CurrentStats.TjenesteMotivation +
-            (100 - character.CurrentStats.Stress) +
+        return
+        (
+            character.CurrentStats
+                .TjenesteMotivation +
+
+            (100 -
+             character.CurrentStats.Stress) +
+
             character.CurrentStats.Sociallyst +
+
             character.CurrentStats.Tillid
         ) / 4.0;
     }
 
-    private RenderFragment StatBar(string label, double value, string className)
+    private RenderFragment StatBar(
+        string label,
+        double value,
+        string className)
     {
         return @<div class="stat-row @className">
             <div>
                 <span>@label</span>
-                <strong>@FormatNumber(value)</strong>
+                <strong>
+                    @FormatNumber(value)
+                </strong>
             </div>
 
             <div class="meter">
@@ -591,7 +807,8 @@
         </div>;
     }
 
-    private static Character CloneCharacter(Character character)
+    private static Character CloneCharacter(
+        Character character)
     {
         return new Character
         {
@@ -601,13 +818,22 @@
 
             BaseStats = new BaseStats
             {
-                TjenesteMotivation = character.BaseStats.TjenesteMotivation,
-                Stress = character.BaseStats.Stress,
-                Sociallyst = character.BaseStats.Sociallyst,
-                Tillid = character.BaseStats.Tillid
+                TjenesteMotivation =
+                    character.BaseStats
+                        .TjenesteMotivation,
+
+                Stress =
+                    character.BaseStats.Stress,
+
+                Sociallyst =
+                    character.BaseStats.Sociallyst,
+
+                Tillid =
+                    character.BaseStats.Tillid
             },
 
-            CurrentStats = CopyStats(character.CurrentStats)
+            CurrentStats =
+                CopyStats(character.CurrentStats)
         };
     }
 
@@ -623,32 +849,41 @@
 
     private async Task GoHome()
     {
-        await LocalStorage.ClearPlayerSessionDataAsync();
+        await LocalStorage
+            .ClearPlayerSessionDataAsync();
+
         Navigation.NavigateTo("/");
     }
 
-    public void Dispose()
-    {
-        pollTimer?.Dispose();
-    }
-    private static double CalculateStateGroupAverage(PlayerState state)
+    private static double CalculateStateGroupAverage(
+        PlayerState state)
     {
         if (state.Characters.Count == 0)
             return 0;
 
-        var motivation = state.Characters
-            .Average(character => character.CurrentStats.TjenesteMotivation);
+        var motivation =
+            state.Characters.Average(
+                character =>
+                    character.CurrentStats
+                        .TjenesteMotivation);
 
-        var stress = state.Characters
-            .Average(character => character.CurrentStats.Stress);
+        var stress =
+            state.Characters.Average(
+                character =>
+                    character.CurrentStats.Stress);
 
-        var social = state.Characters
-            .Average(character => character.CurrentStats.Sociallyst);
+        var social =
+            state.Characters.Average(
+                character =>
+                    character.CurrentStats.Sociallyst);
 
-        var trust = state.Characters
-            .Average(character => character.CurrentStats.Tillid);
+        var trust =
+            state.Characters.Average(
+                character =>
+                    character.CurrentStats.Tillid);
 
-        return (
+        return
+        (
             motivation +
             (100 - stress) +
             social +
@@ -658,12 +893,20 @@
 
     private double CalculateAllGroupsAverage()
     {
-        var validStates = currentQuestionStates
-            .Where(state => state.Characters.Count > 0)
-            .ToList();
+        var validStates =
+            currentQuestionStates
+                .Where(state =>
+                    state.Characters.Count > 0)
+                .ToList();
 
         return validStates.Count == 0
             ? 0
-            : validStates.Average(CalculateStateGroupAverage);
+            : validStates.Average(
+                CalculateStateGroupAverage);
+    }
+
+    public void Dispose()
+    {
+        pollTimer?.Dispose();
     }
 }
