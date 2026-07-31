@@ -3,7 +3,26 @@ using Backend.Services;
 using DotNetEnv;
 using MongoDB.Driver;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Configuration;
+
+// Disable file watching on Render/Linux to avoid inotify instance limits
+// See: https://github.com/dotnet/aspnetcore/issues/34476
+var isProduction = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PORT"));
+if (isProduction)
+{
+    Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "false");
+}
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Disable file watching for configuration files in production to avoid inotify limits
+if (isProduction)
+{
+    foreach (var source in builder.Configuration.Sources.OfType<FileConfigurationSource>())
+    {
+        source.ReloadOnChange = false;
+    }
+}
 
 // Load .env when it exists.
 // Locally this reads LeadingByLead/.env.
