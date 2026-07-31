@@ -136,15 +136,22 @@
         <section class="game-layout">
             <article class="question-card">
                 <header class="player-question-header">
-                    <div>
+                    <div class="question-content">
                         <span class="eyebrow">
                             Spørgsmål @(session.CurrentQuestionIndex + 1) /
                             @session.Questions.Count
                         </span>
 
-                        <h1 class="question-title">
-                            @currentQuestion.Text
-                        </h1>
+                        <h2 class="question-title">
+                            @currentQuestion.Title
+                        </h2>
+
+                        @if (!string.IsNullOrWhiteSpace(currentQuestion.Description))
+                        {
+                            <p class="question-description">
+                                @currentQuestion.Description
+                            </p>
+                        }
                     </div>
 
                     <span class="selection-pill">
