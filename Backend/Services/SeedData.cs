@@ -227,8 +227,9 @@ public static class SeedData
         {
             RequiredSelections = 1,
 
-            Text =
-                "Fase 1: Opstart\n\n" +
+            Title = "Fase 1: Opstart",
+
+            Description =
                 "Ledelsen har besluttet, at din gruppe skal bestå af nye " +
                 "soldater og overflytninger fra andre grupper. Soldaterne er " +
                 "forvirrede over, hvem der er i deres gruppe, søger mod gamle " +
@@ -387,8 +388,9 @@ public static class SeedData
         {
             RequiredSelections = 3,
 
-            Text =
-                "Næste skridt i fase 1\n\n" +
+            Title = "Næste skridt i fase 1",
+
+            Description =
                 "Vælg tre action cards, som beskriver, hvordan du vil føre " +
                 "gruppen videre gennem opstartsfasen.",
 
@@ -574,8 +576,9 @@ public static class SeedData
         {
             RequiredSelections = 1,
 
-            Text =
-                "Fase 2: Drift\n\n" +
+            Title = "Fase 2: Drift",
+
+            Description =
                 "Uddannelsen har kørt i et par måneder. Gruppen er begyndt " +
                 "at fungere socialt, men de nye har svært ved at følge med, " +
                 "mens de erfarne ønsker større kompleksitet. Trusselsbilledet " +
@@ -713,8 +716,9 @@ public static class SeedData
         {
             RequiredSelections = 3,
 
-            Text =
-                "Næste skridt i fase 2\n\n" +
+            Title = "Næste skridt i fase 2",
+
+            Description =
                 "Vælg tre action cards, som beskriver, hvordan du vil " +
                 "fortsætte gruppens udvikling i driftsfasen.",
 
@@ -914,8 +918,9 @@ public static class SeedData
         {
             RequiredSelections = 1,
 
-            Text =
-                "Fase 3: Overdragelse\n\n" +
+            Title = "Fase 3: Overdragelse",
+
+            Description =
                 "Du har brækket benet, og din tid som gruppefører er slut. " +
                 "Der er kun tre måneder til regionsøvelsen. Motivationen er " +
                 "faldet, og du skal finde din afløser internt i gruppen.\n\n" +
@@ -1030,8 +1035,9 @@ public static class SeedData
         {
             RequiredSelections = 3,
 
-            Text =
-                "Næste skridt i fase 3\n\n" +
+            Title = "Næste skridt i fase 3",
+
+            Description =
                 "Vælg tre action cards, som beskriver, hvordan du vil " +
                 "gennemføre overdragelsen til den nye gruppefører.",
 

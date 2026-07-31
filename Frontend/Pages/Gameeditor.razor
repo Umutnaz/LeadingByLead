@@ -78,7 +78,7 @@
                                 </label>
 
                                 <div class="item-main" @onclick="() => ToggleQuestion(question, !selected)">
-                                    <h3>@question.Text</h3>
+                                    <h3>@question.Title</h3>
                                     <p>
                                         @question.AnswerOptions.Count svarmuligheder —
                                         vælg @question.RequiredSelections
@@ -618,7 +618,8 @@
         return new Question
         {
             Id = question.Id,
-            Text = question.Text,
+            Title = question.Title,
+            Description = question.Description,
             RequiredSelections = question.RequiredSelections,
 
             AnswerOptions = question.AnswerOptions?

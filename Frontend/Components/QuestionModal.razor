@@ -17,6 +17,22 @@
 
             <div class="modal-content">
                 <label class="question-field">
+                    <span>Titel på spørgsmål</span>
+
+                    <input type="text"
+                           @bind="Model.Title"
+                           placeholder="Fx: Fase 1: Opstart" />
+                </label>
+
+                <label class="question-field">
+                    <span>Beskrivelse / Spørgsmål</span>
+
+                    <textarea @bind="Model.Description"
+                              placeholder="Beskriv situationen og stil spørgsmålet til spilleren..."
+                              rows="6"></textarea>
+                </label>
+
+                <label class="question-field">
                     <span>Antal svar spilleren skal vælge</span>
 
                     <input type="number"
@@ -159,11 +175,12 @@
 
     private bool IsEdit => !string.IsNullOrWhiteSpace(Model.Id);
 
-    private bool CanSave =>
-        !string.IsNullOrWhiteSpace(Model.Text) &&
-        Model.AnswerOptions.Count > 0 &&
-        Model.AnswerOptions.All(
-            option => !string.IsNullOrWhiteSpace(option.Text));
+     private bool CanSave =>
+         !string.IsNullOrWhiteSpace(Model.Title) &&
+         !string.IsNullOrWhiteSpace(Model.Description) &&
+         Model.AnswerOptions.Count > 0 &&
+         Model.AnswerOptions.All(
+             option => !string.IsNullOrWhiteSpace(option.Text));
 
     protected override void OnParametersSet()
     {
