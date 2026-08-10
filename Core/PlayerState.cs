@@ -15,6 +15,16 @@ public class PlayerState
     public List<CharacterResult> LatestResults { get; set; } = new();
 
     public List<AnswerRecord> Answers { get; set; } = new();
+
+    /// <summary>
+    /// Total engagement effect from the latest answer selection
+    /// </summary>
+    public double LatestEngagementEffect { get; set; } = 0;
+
+    /// <summary>
+    /// Phase events that occurred (e.g., at start of Drift phase)
+    /// </summary>
+    public List<PhaseEventResult> LatestPhaseEvents { get; set; } = new();
 }
 
 public class CharacterSnapshot
@@ -35,6 +45,25 @@ public class CharacterResult
     public CurrentStats Before { get; set; } = new();
 
     public CurrentStats After { get; set; } = new();
+
+    /// <summary>
+    /// Reactions from this character's effects, one per selected answer/card
+    /// </summary>
+    public List<string> Reactions { get; set; } = new();
+
+    /// <summary>
+    /// Priority multiplier for action cards (100%, 85%, or 70%)
+    /// </summary>
+    public double PriorityMultiplier { get; set; } = 1.0;
+}
+
+public class PhaseEventResult
+{
+    public string CharacterName { get; set; } = "";
+
+    public CurrentStats Effect { get; set; } = new();
+
+    public string Explanation { get; set; } = "";
 }
 
 public class AnswerRecord

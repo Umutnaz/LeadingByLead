@@ -1,4 +1,5 @@
 using Backend.Repositories;
+using Backend.Services;
 using Core;
 using Microsoft.AspNetCore.Mvc;
 
@@ -221,6 +222,115 @@ public class GameSessionsController : ControllerBase
 
         if (state.CurrentQuestionIndex != session.CurrentQuestionIndex)
             return BadRequest("Spilleren svarer på et forkert spørgsmål.");
+
+        // Store character states before applying impacts
+        var characterSnapshots = session.Characters
+            .Select(c => new CharacterSnapshot
+            {
+                CharacterId = c.Id,
+                Name = c.Name,
+                CurrentStats = new CurrentStats
+                {
+                    TjenesteMotivation = c.CurrentStats.TjenesteMotivation,
+                    Sociallyst = c.CurrentStats.Sociallyst,
+                    Tillid = c.CurrentStats.Tillid,
+                    Stress = c.CurrentStats.Stress
+                }
+            })
+            .ToList();
+
+        state.Characters = characterSnapshots;
+
+        // Get the current question
+        var currentQuestion = session.Questions
+            .ElementAtOrDefault(session.CurrentQuestionIndex);
+
+        if (currentQuestion != null && state.Answers.Count > 0)
+        {
+            // Get the selected answer IDs
+            var latestAnswer = state.Answers
+                .OrderByDescending(a => session.Questions
+                    .FindIndex(q => q.Id == a.QuestionId))
+                .FirstOrDefault();
+
+            if (latestAnswer != null)
+            {
+                double totalEngagementEffect = 0;
+
+                // Apply each selected answer with appropriate multiplier
+                for (int i = 0; i < latestAnswer.AnswerIds.Count; i++)
+                {
+                    var answerId = latestAnswer.AnswerIds[i];
+                    var option = currentQuestion.AnswerOptions
+                        .FirstOrDefault(ao => ao.Id == answerId);
+
+                    if (option != null)
+                    {
+                        // Calculate multiplier based on selection order (for action cards)
+                        double multiplier = currentQuestion.RequiredSelections == 3
+                            ? i switch
+                            {
+                                0 => 1.0,  // First: 100%
+                                1 => 0.85, // Second: 85%
+                                2 => 0.70, // Third: 70%
+                                _ => 1.0
+                            }
+                            : 1.0; // Single selection: always 100%
+
+                        // Apply the impact with multiplier
+                        var engagementEffect = RuleEvaluator
+                            .ApplyAnswerOptionToCharacters(
+                                session.Characters,
+                                option,
+                                multiplier);
+
+                        totalEngagementEffect += engagementEffect;
+
+                        // Collect reactions for each answer
+                        foreach (var effect in option.CharacterEffects)
+                        {
+                            var playerResult = state.LatestResults
+                                .FirstOrDefault(r => r.CharacterId == effect.CharacterId);
+
+                            if (playerResult == null)
+                            {
+                                playerResult = new CharacterResult
+                                {
+                                    CharacterId = effect.CharacterId,
+                                    CharacterName = session.Characters
+                                        .First(c => c.Id == effect.CharacterId).Name,
+                                    PriorityMultiplier = multiplier,
+                                    Before = characterSnapshots
+                                        .First(cs => cs.CharacterId == effect.CharacterId)
+                                        .CurrentStats
+                                };
+                                state.LatestResults.Add(playerResult);
+                            }
+
+                            if (!string.IsNullOrEmpty(effect.Reaction))
+                                playerResult.Reactions.Add(effect.Reaction);
+                        }
+                    }
+                }
+
+                // Set after stats for all results
+                foreach (var result in state.LatestResults)
+                {
+                    var character = session.Characters
+                        .First(c => c.Id == result.CharacterId);
+
+                    result.After = new CurrentStats
+                    {
+                        TjenesteMotivation = character.CurrentStats.TjenesteMotivation,
+                        Sociallyst = character.CurrentStats.Sociallyst,
+                        Tillid = character.CurrentStats.Tillid,
+                        Stress = character.CurrentStats.Stress
+                    };
+                }
+
+                state.LatestEngagementEffect = totalEngagementEffect;
+            }
+        }
 
         await _repository.PostPlayerStateAsync(id, state);
 

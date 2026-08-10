@@ -44,112 +44,81 @@ public static class SeedData
         {
             new()
             {
-                Name = "Søren - LMG2",
-                Description =
-                    "Rolig, pligtopfyldende og til tider tilbageholdende. " +
-                    "Har været medlem i 11 år. Han møder altid forberedt og " +
-                    "sørger for, at tingene bliver gjort rigtigt første gang. " +
-                    "Han sætter pris på faste rammer og forudsigelighed, men " +
-                    "kan være tøvende under pres. Han forsøger at blive mere " +
-                    "aktiv i kompagniet.",
-
-                BaseStats = new BaseStats
-                {
-                    TjenesteMotivation = 75,
-                    Stress = 30,
-                    Sociallyst = 40,
-                    Tillid = 80
-                }
-            },
-
-            new()
-            {
-                Name = "Ida-Sofie - GV2",
-                Description =
-                    "Kreativ, inspirerende og til tider ustruktureret. " +
-                    "Blev medlem for 4 uger siden. Hun kommer med mange idéer " +
-                    "og alternative løsninger, men kan have svært ved at følge " +
-                    "faste rammer. Hun motiveres af fleksibilitet og frihed.",
-
-                BaseStats = new BaseStats
-                {
-                    TjenesteMotivation = 85,
-                    Stress = 45,
-                    Sociallyst = 80,
-                    Tillid = 55
-                }
-            },
-
-            new()
-            {
-                Name = "Lene - GV4",
-                Description =
-                    "Loyal, tålmodig og omsorgsfuld. Blev medlem for 15 år " +
-                    "siden. Hun er den stille støtte i gruppen, hjælper andre " +
-                    "og holder humøret oppe. Hun er ikke glad for forandringer " +
-                    "og kan blive tilbageholdende i stressede situationer.",
-
-                BaseStats = new BaseStats
-                {
-                    TjenesteMotivation = 65,
-                    Stress = 35,
-                    Sociallyst = 70,
-                    Tillid = 85
-                }
-            },
-
-            new()
-            {
                 Name = "Daniel - GV1",
-                Description =
-                    "Direkte, målrettet og kan virke hård. Har været medlem " +
-                    "i 10 år. Han presser sig selv og andre og får tingene til " +
-                    "at ske, men kan skabe konflikter. Han har planer om at " +
-                    "søge en lederrolle.",
-
+                Description = "",
                 BaseStats = new BaseStats
                 {
-                    TjenesteMotivation = 90,
-                    Stress = 50,
+                    TjenesteMotivation = 82,
                     Sociallyst = 45,
-                    Tillid = 65
+                    Tillid = 66,
+                    Stress = 32
                 }
             },
 
             new()
             {
                 Name = "Charlie - LMG1",
-                Description =
-                    "Analytisk, struktureret og detaljeorienteret. Har netop " +
-                    "færdiggjort HGU. Han elsker regler, orden og præcision. " +
-                    "Han kommenterer hurtigt, hvis reglementer ikke følges, " +
-                    "men sikrer samtidig høj kvalitet.",
-
+                Description = "",
                 BaseStats = new BaseStats
                 {
-                    TjenesteMotivation = 80,
-                    Stress = 40,
-                    Sociallyst = 35,
-                    Tillid = 70
+                    TjenesteMotivation = 78,
+                    Sociallyst = 38,
+                    Tillid = 64,
+                    Stress = 30
                 }
             },
 
             new()
             {
                 Name = "Inzo - GV3",
-                Description =
-                    "Spontan, energisk og udadvendt. Har været medlem i 2 år " +
-                    "og elsker fællesskabet. Han motiverer andre og skaber god " +
-                    "stemning, men glemmer nogle gange opgaver og kommer for sent.",
-
+                Description = "",
                 BaseStats = new BaseStats
                 {
-                    TjenesteMotivation = 85,
-                    Stress = 35,
-                    Sociallyst = 95,
-                    Tillid = 65
+                    TjenesteMotivation = 58,
+                    Sociallyst = 88,
+                    Tillid = 72,
+                    Stress = 25
                 }
-            }
+            },
+
+            new()
+            {
+                Name = "Søren - LMG2",
+                Description = "",
+                BaseStats = new BaseStats
+                {
+                    TjenesteMotivation = 66,
+                    Sociallyst = 52,
+                    Tillid = 64,
+                    Stress = 40
+                }
+            },
+
+            new()
+            {
+                Name = "Ida-Sofie - GV2",
+                Description = "",
+                BaseStats = new BaseStats
+                {
+                    TjenesteMotivation = 70,
+                    Sociallyst = 80,
+                    Tillid = 64,
+                    Stress = 34
+                }
+            },
+
+            new()
+            {
+                Name = "Lene - GV4",
+                Description = "",
+                BaseStats = new BaseStats
+                {
+                    TjenesteMotivation = 62,
+                    Sociallyst = 74,
+                    Tillid = 70,
+                    Stress = 38
+                }
+            },
         };
     }
 

@@ -5,4 +5,6 @@ public class CharacterEffect
     public string CharacterId { get; set; } = "";
 
     public List<StatChange> Changes { get; set; } = new();
+
+    public string Reaction { get; set; } = "";
 }
