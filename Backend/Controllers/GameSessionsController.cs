@@ -58,6 +58,113 @@ public class GameSessionsController : ControllerBase
         // If not found, leave _excelDoc null
     }
 
+    // More flexible lookup: try matching by Kortnavn/Gearnavn contained in option text, then by ID, then fallbacks.
+    private static string? FindExplanationForOptionFlexible(string optionText, string characterId)
+    {
+        if (string.IsNullOrWhiteSpace(optionText) && string.IsNullOrWhiteSpace(characterId))
+            return null;
+
+        EnsureExcelLoaded();
+        if (_excelDoc == null)
+            return null;
+
+        try
+        {
+            var root = _excelDoc.RootElement;
+            var normalizedOption = (optionText ?? string.Empty).Trim();
+
+            static string? ReadExplanation(System.Text.Json.JsonElement item)
+            {
+                if (item.TryGetProperty("Psykologisk begrundelse", out var expl) && !string.IsNullOrWhiteSpace(expl.GetString()))
+                    return expl.GetString();
+                return null;
+            }
+
+            // 1) Match by Kortnavn (action cards)
+            if (root.TryGetProperty("action_cards", out var cards))
+            {
+                foreach (var item in cards.EnumerateArray())
+                {
+                    if (item.TryGetProperty("Kortnavn", out var kn))
+                    {
+                        var cardName = (kn.GetString() ?? string.Empty).Trim();
+                        if (!string.IsNullOrWhiteSpace(cardName) && normalizedOption.IndexOf(cardName, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            var found = ReadExplanation(item);
+                            if (!string.IsNullOrWhiteSpace(found))
+                                return found;
+                        }
+                    }
+                }
+            }
+
+            // 2) Match by Gearnavn (gears)
+            if (root.TryGetProperty("gears", out var gears))
+            {
+                foreach (var item in gears.EnumerateArray())
+                {
+                    if (item.TryGetProperty("Gearnavn", out var gn))
+                    {
+                        var gearName = (gn.GetString() ?? string.Empty).Trim();
+                        if (!string.IsNullOrWhiteSpace(gearName) && normalizedOption.IndexOf(gearName, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            var found = ReadExplanation(item);
+                            if (!string.IsNullOrWhiteSpace(found))
+                                return found;
+                        }
+                    }
+                }
+            }
+
+            // 3) Match by ID (if available)
+            if (!string.IsNullOrWhiteSpace(characterId))
+            {
+                if (root.TryGetProperty("action_cards", out var cards2))
+                {
+                    foreach (var item in cards2.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
+                        {
+                            var found = ReadExplanation(item);
+                            if (!string.IsNullOrWhiteSpace(found))
+                                return found;
+                        }
+                    }
+                }
+
+                if (root.TryGetProperty("gears", out var gears2))
+                {
+                    foreach (var item in gears2.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
+                        {
+                            var found = ReadExplanation(item);
+                            if (!string.IsNullOrWhiteSpace(found))
+                                return found;
+                        }
+                    }
+                }
+            }
+
+            // 4) Last-resort: any Kortnavn partial match with explanation
+            if (root.TryGetProperty("action_cards", out var cards3))
+            {
+                foreach (var item in cards3.EnumerateArray())
+                {
+                    var found = ReadExplanation(item);
+                    if (!string.IsNullOrWhiteSpace(found) && item.TryGetProperty("Kortnavn", out var kn) && normalizedOption.IndexOf((kn.GetString() ?? string.Empty), StringComparison.OrdinalIgnoreCase) >= 0)
+                        return found;
+                }
+            }
+        }
+        catch
+        {
+            // ignore parsing errors
+        }
+
+        return null;
+    }
+
     private static string? FindExplanationForOption(string optionText, string characterId)
     {
         if (string.IsNullOrWhiteSpace(optionText) || string.IsNullOrWhiteSpace(characterId))
@@ -277,7 +384,7 @@ public class GameSessionsController : ControllerBase
                 {
                     if (string.IsNullOrWhiteSpace(effect.Explanation))
                     {
-                        var found = FindExplanationForOption(option.Text ?? string.Empty, effect.CharacterId);
+                        var found = FindExplanationForOptionFlexible(option.Text ?? string.Empty, effect.CharacterId);
                         if (!string.IsNullOrWhiteSpace(found))
                             effect.Explanation = found;
                     }
@@ -469,7 +576,7 @@ public class GameSessionsController : ControllerBase
                                 // Prefer explicit Explanation on the effect; otherwise try to find one in the excel JSON
                                 var explanation = !string.IsNullOrWhiteSpace(effect.Explanation)
                                     ? effect.Explanation
-                                    : FindExplanationForOption(option.Text ?? string.Empty, effect.CharacterId) ?? string.Empty;
+                                    : FindExplanationForOptionFlexible(option.Text ?? string.Empty, effect.CharacterId) ?? string.Empty;
 
                                 if (!string.IsNullOrWhiteSpace(explanation))
                                     combined = combined + " — " + explanation;
