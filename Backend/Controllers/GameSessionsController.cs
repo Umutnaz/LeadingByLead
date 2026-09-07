@@ -267,6 +267,24 @@ public class GameSessionsController : ControllerBase
         if (session.State != GameState.Running)
             return BadRequest("Spillet kører ikke.");
 
+        // Populate missing explanations from excel JSON so player previews include the psychological rationale
+        var currentQuestion = session.Questions.ElementAtOrDefault(session.CurrentQuestionIndex);
+        if (currentQuestion != null)
+        {
+            foreach (var option in currentQuestion.AnswerOptions)
+            {
+                foreach (var effect in option.CharacterEffects)
+                {
+                    if (string.IsNullOrWhiteSpace(effect.Explanation))
+                    {
+                        var found = FindExplanationForOption(option.Text ?? string.Empty, effect.CharacterId);
+                        if (!string.IsNullOrWhiteSpace(found))
+                            effect.Explanation = found;
+                    }
+                }
+            }
+        }
+
         // Mark effects revealed so player UIs can display the preview
         session.EffectsRevealed = true;
 
