@@ -41,9 +41,15 @@
                         <h2>Alle spørgsmål</h2>
                     </div>
 
-                    <button class="primary-button" @onclick="() => OpenQuestionModal(null)">
-                        + Opret spørgsmål
-                    </button>
+                    <div class="panel-actions">
+                        <button class="primary-button" @onclick="() => OpenQuestionModal(null)">
+                            + Opret spørgsmål
+                        </button>
+
+                        <button class="small-button" @onclick="SelectAllQuestions">
+                            Vælg alle
+                        </button>
+                    </div>
                 </header>
 
                 <div class="selected-count">
@@ -112,9 +118,15 @@
                         <h2>Alle characters</h2>
                     </div>
 
-                    <button class="primary-button" @onclick="() => OpenCharacterModal(null)">
-                        + Opret character
-                    </button>
+                    <div class="panel-actions">
+                        <button class="primary-button" @onclick="() => OpenCharacterModal(null)">
+                            + Opret character
+                        </button>
+
+                        <button class="small-button" @onclick="SelectAllCharacters">
+                            Vælg alle
+                        </button>
+                    </div>
                 </header>
 
                 <div class="selected-count">
@@ -401,18 +413,34 @@
     {
         if (isChecked && selectedCharacters.All(item => item.Id != character.Id))
             selectedCharacters.Add(character);
-
+ 
         if (!isChecked)
             selectedCharacters = selectedCharacters.Where(item => item.Id != character.Id).ToList();
+    }
+
+    private void SelectAllCharacters()
+    {
+        if (allCharacters == null)
+            return;
+
+        selectedCharacters = new List<Character>(allCharacters);
     }
 
     private void ToggleQuestion(Question question, bool isChecked)
     {
         if (isChecked && selectedQuestions.All(item => item.Id != question.Id))
             selectedQuestions.Add(question);
-
+ 
         if (!isChecked)
             selectedQuestions = selectedQuestions.Where(item => item.Id != question.Id).ToList();
+    }
+
+    private void SelectAllQuestions()
+    {
+        if (allQuestions == null)
+            return;
+
+        selectedQuestions = new List<Question>(allQuestions);
     }
 
     private async Task CreateGame()
