@@ -26,6 +26,8 @@ public interface IGameSessionService
 
     Task<bool> AdvanceQuestionAsync(string sessionId);
 
+    Task<bool> RevealEffectsAsync(string sessionId);
+
     Task<bool> DeleteSessionAsync(string sessionId);
 
     Task<bool> PostPlayerStateAsync(

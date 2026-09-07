@@ -463,8 +463,16 @@
                 }
             }
 
-            // Show effects locally (expand dropdowns). Do not advance server state yet.
+            // Ask server to reveal effects so all players see them
             confirmShowResults = false;
+            var revealSuccess = await GameSessionService.RevealEffectsAsync(sessionId);
+
+            if (!revealSuccess)
+            {
+                message = GameSessionService.LastError;
+                return;
+            }
+
             showEffects = true;
             return;
         }

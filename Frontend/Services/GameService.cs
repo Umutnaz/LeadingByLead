@@ -268,6 +268,13 @@ public class GameSessionService : IGameSessionService
             "Spillet kunne ikke gå videre.");
     }
 
+    public Task<bool> RevealEffectsAsync(string sessionId)
+    {
+        return PostWithoutBodyAsync(
+            $"{BaseUrl}/{Uri.EscapeDataString(sessionId)}/reveal-effects",
+            "Effekter kunne ikke vises.");
+    }
+
     public async Task<bool> DeleteSessionAsync(string sessionId)
     {
         ClearError();

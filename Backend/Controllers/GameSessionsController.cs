@@ -249,6 +249,26 @@ public class GameSessionsController : ControllerBase
         session.CurrentQuestionIndex = 0;
         session.QuestionPhase = QuestionPhase.Answering;
         session.State = GameState.Running;
+        session.EffectsRevealed = false;
+
+        await _repository.UpdateAsync(id, session);
+
+        return NoContent();
+    }
+
+    [HttpPost("{id}/reveal-effects")]
+    public async Task<IActionResult> RevealEffects(string id)
+    {
+        var session = await _repository.GetAsync(id);
+
+        if (session == null)
+            return NotFound();
+
+        if (session.State != GameState.Running)
+            return BadRequest("Spillet kører ikke.");
+
+        // Mark effects revealed so player UIs can display the preview
+        session.EffectsRevealed = true;
 
         await _repository.UpdateAsync(id, session);
 
@@ -265,6 +285,9 @@ public class GameSessionsController : ControllerBase
 
         if (session.State != GameState.Running)
             return BadRequest("Spillet kører ikke.");
+
+        // Reset the reveal flag whenever we change phase
+        session.EffectsRevealed = false;
 
         if (session.QuestionPhase == QuestionPhase.Answering)
         {

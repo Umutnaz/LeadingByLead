@@ -44,7 +44,7 @@
             Spillet er ikke startet endnu. Vent på hosten.
         </section>
     }
-    else if (session.QuestionPhase == QuestionPhase.Results)
+    else if (session.QuestionPhase == QuestionPhase.Results || session.EffectsRevealed)
     {
         <section class="result-screen">
             <article class="result-card">
@@ -68,71 +68,123 @@
                     </article>
                 </div>
 
-                @if (latestResults.Count == 0)
+                @if (session.QuestionPhase == QuestionPhase.Results)
                 {
-                    <div class="no-results">
-                        Dit seneste valg ændrede ikke gruppens værdier.
-                    </div>
+                    @if (latestResults.Count == 0)
+                    {
+                        <div class="no-results">
+                            Dit seneste valg ændrede ikke gruppens værdier.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="result-list">
+                            @foreach (var result in latestResults)
+                            {
+                                <article class="character-result">
+                                    <h2>@result.CharacterName</h2>
+
+                                    @if (!HasAnyDifference(result))
+                                    {
+                                        <p class="no-character-change">
+                                            Ingen ændringer
+                                        </p>
+
+                                        @if (result.Reactions != null && result.Reactions.Count > 0)
+                                        {
+                                            <div class="reaction-list">
+                                                @foreach (var reaction in result.Reactions)
+                                                {
+                                                    <p class="reaction">@reaction</p>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="change-list">
+                                            @ResultRow(
+                                                "Tjenestemotivation",
+                                                result.Before.TjenesteMotivation,
+                                                result.After.TjenesteMotivation)
+
+                                            @ResultRow(
+                                                "Stress",
+                                                result.Before.Stress,
+                                                result.After.Stress)
+
+                                            @ResultRow(
+                                                "Social lyst",
+                                                result.Before.Sociallyst,
+                                                result.After.Sociallyst)
+
+                                            @ResultRow(
+                                                "Tillid",
+                                                result.Before.Tillid,
+                                                result.After.Tillid)
+                                        </div>
+
+                                        @if (result.Reactions != null && result.Reactions.Count > 0)
+                                        {
+                                            <div class="reaction-list">
+                                                @foreach (var reaction in result.Reactions)
+                                                {
+                                                    <p class="reaction">@reaction</p>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                </article>
+                            }
+                        </div>
+                    }
                 }
                 else
                 {
-                    <div class="result-list">
-                        @foreach (var result in latestResults)
+                    // If effects were revealed by host (but server didn't change to Results), show preview of all options and their effects
+                    <div class="preview-effects">
+                        <h2>Vis effekt</h2>
+
+                        @if (currentQuestion != null)
                         {
-                            <article class="character-result">
-                                <h2>@result.CharacterName</h2>
+                            @foreach (var option in currentQuestion.AnswerOptions.Select((value, index) => new { value, index }))
+                            {
+                                <details class="answer-card answer-@option.index" open>
+                                    <summary>
+                                        <span>@GetAnswerIcon(option.index)</span>
 
-                                @if (!HasAnyDifference(result))
-                                {
-                                    <p class="no-character-change">
-                                        Ingen ændringer
-                                    </p>
+                                        <div>
+                                            <strong>@option.value.Text</strong>
 
-                                    @if (result.Reactions != null && result.Reactions.Count > 0)
-                                    {
-                                        <div class="reaction-list">
-                                            @foreach (var reaction in result.Reactions)
-                                            {
-                                                <p class="reaction">@reaction</p>
-                                            }
+                                            <small>
+                                                @option.value.CharacterEffects.Sum(effect => effect.Changes.Count)
+                                                påvirkninger
+                                            </small>
                                         </div>
-                                    }
-                                }
-                                else
-                                {
-                                    <div class="change-list">
-                                        @ResultRow(
-                                            "Tjenestemotivation",
-                                            result.Before.TjenesteMotivation,
-                                            result.After.TjenesteMotivation)
+                                    </summary>
 
-                                        @ResultRow(
-                                            "Stress",
-                                            result.Before.Stress,
-                                            result.After.Stress)
+                                    <div class="effect-messages">
+                                        @foreach (var effect in option.value.CharacterEffects)
+                                        {
+                                            var character = session?.Characters.FirstOrDefault(c => c.Id == effect.CharacterId);
+                                            var name = character != null ? character.Name : effect.CharacterId;
 
-                                        @ResultRow(
-                                            "Social lyst",
-                                            result.Before.Sociallyst,
-                                            result.After.Sociallyst)
+                                            var parts = effect.Changes.Select(ch =>
+                                            {
+                                                var verb = ch.Amount > 0 ? "øges" : "falder";
+                                                return $"{(ch.StatName == nameof(Core.CurrentStats.TjenesteMotivation) ? "Motivation" : ch.StatName)} {verb} med {Math.Abs(ch.Amount)}";
+                                            });
 
-                                        @ResultRow(
-                                            "Tillid",
-                                            result.Before.Tillid,
-                                            result.After.Tillid)
+                                            <p class="effect-line">@name: @string.Join(", ", parts) — @effect.Reaction</p>
+
+                                            @if (!string.IsNullOrWhiteSpace(effect.Explanation))
+                                            {
+                                                <p class="effect-explanation">@effect.Explanation</p>
+                                            }
+                                        }
                                     </div>
-
-                                    @if (result.Reactions != null && result.Reactions.Count > 0)
-                                    {
-                                        <div class="reaction-list">
-                                            @foreach (var reaction in result.Reactions)
-                                            {
-                                                <p class="reaction">@reaction</p>
-                                            }
-                                        </div>
-                                    }
-                                }
-                            </article>
+                                </details>
+                            }
                         }
                     </div>
                 }

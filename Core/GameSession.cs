@@ -20,4 +20,7 @@ public class GameSession
     public GameState State { get; set; } = GameState.Lobby;
 
     public List<PlayerState> PlayerStates { get; set; } = new();
+
+    // When true, host has revealed the effect preview — players should show effect messages
+    public bool EffectsRevealed { get; set; } = false;
 }
