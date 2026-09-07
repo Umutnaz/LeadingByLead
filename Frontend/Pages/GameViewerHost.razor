@@ -293,10 +293,14 @@
                                                 return $"{(ch.StatName == nameof(Core.CurrentStats.TjenesteMotivation) ? "Motivation" : ch.StatName)} {verb} med {Math.Abs(ch.Amount)}";
                                             });
 
-                                            <p class="effect-line">@name: @string.Join(", ", parts) — @effect.Reaction</p>
                                             @if (!string.IsNullOrWhiteSpace(effect.Explanation))
                                             {
+                                                <p class="effect-line">@name: @string.Join(", ", parts)</p>
                                                 <p class="effect-explanation">@effect.Explanation</p>
+                                            }
+                                            else
+                                            {
+                                                <p class="effect-line">@name: @string.Join(", ", parts) — @effect.Reaction</p>
                                             }
                                         }
                                     </div>
