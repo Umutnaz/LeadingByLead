@@ -2,6 +2,8 @@ using Backend.Repositories;
 using Backend.Services;
 using Core;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
+using System.IO;
 
 namespace Backend.Controllers;
 
@@ -13,10 +15,122 @@ public class GameSessionsController : ControllerBase
 
     private readonly IGameSessionRepository _repository;
 
+    // Cache for excel data to avoid repeated file IO
+    private static JsonDocument? _excelDoc;
+
     public GameSessionsController(
         IGameSessionRepository repository)
     {
         _repository = repository;
+    }
+
+    private static void EnsureExcelLoaded()
+    {
+        if (_excelDoc != null)
+            return;
+
+        // Try several candidate paths relative to current directory
+        var candidates = new[]
+        {
+            "excel_data.json",
+            "..\\excel_data.json",
+            "..\\..\\excel_data.json",
+            Path.Combine(AppContext.BaseDirectory, "..\\..\\..\\..\\excel_data.json"),
+        };
+
+        foreach (var path in candidates)
+        {
+            try
+            {
+                if (System.IO.File.Exists(path))
+                {
+                    var json = System.IO.File.ReadAllText(path);
+                    _excelDoc = JsonDocument.Parse(json);
+                    return;
+                }
+            }
+            catch
+            {
+                // ignore and continue
+            }
+        }
+
+        // If not found, leave _excelDoc null
+    }
+
+    private static string? FindExplanationForOption(string optionText, string characterId)
+    {
+        if (string.IsNullOrWhiteSpace(optionText) || string.IsNullOrWhiteSpace(characterId))
+            return null;
+
+        EnsureExcelLoaded();
+        if (_excelDoc == null)
+            return null;
+
+        try
+        {
+            var root = _excelDoc.RootElement;
+
+            // Search in gears
+            if (root.TryGetProperty("gears", out var gears))
+            {
+                foreach (var item in gears.EnumerateArray())
+                {
+                    if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
+                    {
+                        // Try match by Gearnavn contained in option text
+                        if (item.TryGetProperty("Gearnavn", out var gn))
+                        {
+                            var gearName = gn.GetString() ?? string.Empty;
+                            if (!string.IsNullOrWhiteSpace(gearName) && optionText.Contains(gearName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (item.TryGetProperty("Psykologisk begrundelse", out var expl))
+                                    return expl.GetString();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Search in action_cards (kortnavn)
+            if (root.TryGetProperty("action_cards", out var cards))
+            {
+                foreach (var item in cards.EnumerateArray())
+                {
+                    if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
+                    {
+                        if (item.TryGetProperty("Kortnavn", out var kn))
+                        {
+                            var cardName = kn.GetString() ?? string.Empty;
+                            if (!string.IsNullOrWhiteSpace(cardName) && optionText.Contains(cardName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (item.TryGetProperty("Psykologisk begrundelse", out var expl))
+                                    return expl.GetString();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fallback: try to find any entry for characterId with a Psykologisk begrundelse
+            if (root.TryGetProperty("gears", out var gears2))
+            {
+                foreach (var item in gears2.EnumerateArray())
+                {
+                    if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
+                    {
+                        if (item.TryGetProperty("Psykologisk begrundelse", out var expl))
+                            return expl.GetString();
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // ignore parsing errors
+        }
+
+        return null;
     }
 
     [HttpPost]
@@ -308,7 +422,19 @@ public class GameSessionsController : ControllerBase
                             }
 
                             if (!string.IsNullOrEmpty(effect.Reaction))
-                                playerResult.Reactions.Add(effect.Reaction);
+                            {
+                                var combined = effect.Reaction;
+
+                                // Prefer explicit Explanation on the effect; otherwise try to find one in the excel JSON
+                                var explanation = !string.IsNullOrWhiteSpace(effect.Explanation)
+                                    ? effect.Explanation
+                                    : FindExplanationForOption(option.Text ?? string.Empty, effect.CharacterId) ?? string.Empty;
+
+                                if (!string.IsNullOrWhiteSpace(explanation))
+                                    combined = combined + " — " + explanation;
+
+                                playerResult.Reactions.Add(combined);
+                            }
                         }
                     }
                 }

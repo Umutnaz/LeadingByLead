@@ -294,6 +294,10 @@
                                             });
 
                                             <p class="effect-line">@name: @string.Join(", ", parts) — @effect.Reaction</p>
+                                            @if (!string.IsNullOrWhiteSpace(effect.Explanation))
+                                            {
+                                                <p class="effect-explanation">@effect.Explanation</p>
+                                            }
                                         }
                                     </div>
                                 </details>

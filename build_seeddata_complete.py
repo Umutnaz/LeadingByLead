@@ -47,8 +47,8 @@ def gen_changes(tjenestemotivation, sociallyst, tillid, stress):
         changes.append(f"Change(nameof(CurrentStats.Stress), {stress})")
     return changes
 
-def gen_effect_line(person_id, reaction, tjenestemotivation, sociallyst, tillid, stress, indent="                    "):
-    """Generate single Effect() line."""
+def gen_effect_line(person_id, reaction, explanation, tjenestemotivation, sociallyst, tillid, stress, indent="                    "):
+    """Generate single Effect() line with explanation."""
     char_ref = CHAR_ID_TO_REF.get(person_id)
     if not char_ref:
         return None
@@ -58,8 +58,9 @@ def gen_effect_line(person_id, reaction, tjenestemotivation, sociallyst, tillid,
         return None
     
     reaction_escaped = esc(reaction)
+    explanation_escaped = esc(explanation)
     changes_str = ", ".join(changes)
-    return f'{indent}Effect({char_ref}, "{reaction_escaped}", {changes_str})'
+    return f'{indent}Effect({char_ref}, "{reaction_escaped}", "{explanation_escaped}", {changes_str})'
 
 # Build the file content
 lines = [
@@ -241,6 +242,7 @@ for phase in phases:
                 effect_line = gen_effect_line(
                     gear_item['ID'],
                     gear_item.get('Reaktion', ''),
+                    gear_item.get('Psykologisk begrundelse', ''),
                     gear_item.get('Δ Tjenestemotivation', 0) or 0,
                     gear_item.get('Δ Sociale lyst', 0) or 0,
                     gear_item.get('Δ Tillid', 0) or 0,
@@ -289,6 +291,7 @@ for phase in phases:
                 effect_line = gen_effect_line(
                     card_item['ID'],
                     card_item.get('Reaktion', ''),
+                    card_item.get('Psykologisk begrundelse', ''),
                     card_item.get('Δ Tjenestemotivation', 0) or 0,
                     card_item.get('Δ Sociale lyst', 0) or 0,
                     card_item.get('Δ Tillid', 0) or 0,
@@ -339,7 +342,7 @@ lines.extend([
 ])
 
 # Write the file
-output_path = 'SeedData_Generated.cs'
+output_path = 'Backend/Services/SeedData.cs'
 with open(output_path, 'w', encoding='utf-8') as f:
     f.write('\n'.join(lines))
 
