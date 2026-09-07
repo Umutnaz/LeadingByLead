@@ -178,6 +178,16 @@
                                             @if (!HasAnyDifference(result))
                                             {
                                                 <span>Ingen ændringer</span>
+
+                                                @if (result.Reactions != null && result.Reactions.Count > 0)
+                                                {
+                                                    <div class="host-reaction-list">
+                                                        @foreach (var reaction in result.Reactions)
+                                                        {
+                                                            <p class="reaction">@reaction</p>
+                                                        }
+                                                    </div>
+                                                }
                                             }
                                             else
                                             {
@@ -187,6 +197,16 @@
                                                     @ResultRow("Social", result.Before.Sociallyst, result.After.Sociallyst)
                                                     @ResultRow("Tillid", result.Before.Tillid, result.After.Tillid)
                                                 </div>
+
+                                                @if (result.Reactions != null && result.Reactions.Count > 0)
+                                                {
+                                                    <div class="host-reaction-list">
+                                                        @foreach (var reaction in result.Reactions)
+                                                        {
+                                                            <p class="reaction">@reaction</p>
+                                                        }
+                                                    </div>
+                                                }
                                             }
                                         </section>
                                     }

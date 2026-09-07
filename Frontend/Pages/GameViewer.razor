@@ -87,6 +87,16 @@
                                     <p class="no-character-change">
                                         Ingen ændringer
                                     </p>
+
+                                    @if (result.Reactions != null && result.Reactions.Count > 0)
+                                    {
+                                        <div class="reaction-list">
+                                            @foreach (var reaction in result.Reactions)
+                                            {
+                                                <p class="reaction">@reaction</p>
+                                            }
+                                        </div>
+                                    }
                                 }
                                 else
                                 {
@@ -111,6 +121,16 @@
                                             result.Before.Tillid,
                                             result.After.Tillid)
                                     </div>
+
+                                    @if (result.Reactions != null && result.Reactions.Count > 0)
+                                    {
+                                        <div class="reaction-list">
+                                            @foreach (var reaction in result.Reactions)
+                                            {
+                                                <p class="reaction">@reaction</p>
+                                            }
+                                        </div>
+                                    }
                                 }
                             </article>
                         }
