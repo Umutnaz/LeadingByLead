@@ -237,7 +237,7 @@
                     <button class="next-button"
                             @onclick="ShowResults"
                             disabled="@(session.Players.Count == 0)">
-                        Vis resultater
+                        @(showEffects ? "Gå videre" : "Vis effekt")
                     </button>
 
                     @if (GetAnsweredPlayerCount() < session.Players.Count)
@@ -267,18 +267,36 @@
                         {
                             @foreach (var option in currentQuestion.AnswerOptions.Select((value, index) => new { value, index }))
                             {
-                                <div class="answer-card answer-@option.index">
-                                    <span>@GetAnswerIcon(option.index)</span>
+                                <details class="answer-card answer-@option.index" open="@showEffects">
+                                    <summary>
+                                        <span>@GetAnswerIcon(option.index)</span>
 
-                                    <div>
-                                        <strong>@option.value.Text</strong>
+                                        <div>
+                                            <strong>@option.value.Text</strong>
 
-                                        <small>
-                                            @option.value.CharacterEffects.Sum(effect => effect.Changes.Count)
-                                            påvirkninger
-                                        </small>
+                                            <small>
+                                                @option.value.CharacterEffects.Sum(effect => effect.Changes.Count)
+                                                påvirkninger
+                                            </small>
+                                        </div>
+                                    </summary>
+
+                                    <div class="effect-messages">
+                                        @foreach (var effect in option.value.CharacterEffects)
+                                        {
+                                            var character = session?.Characters.FirstOrDefault(c => c.Id == effect.CharacterId);
+                                            var name = character != null ? character.Name : effect.CharacterId;
+
+                                            var parts = effect.Changes.Select(ch =>
+                                            {
+                                                var verb = ch.Amount > 0 ? "øges" : "falder";
+                                                return $"{(ch.StatName == nameof(Core.CurrentStats.TjenesteMotivation) ? "Motivation" : ch.StatName)} {verb} med {Math.Abs(ch.Amount)}";
+                                            });
+
+                                            <p class="effect-line">@name: @string.Join(", ", parts) — @effect.Reaction</p>
+                                        }
                                     </div>
-                                </div>
+                                </details>
                             }
                         }
                     </div>
@@ -324,6 +342,7 @@
     private string message = "";
 
     private bool confirmShowResults;
+    private bool showEffects;
 
     private System.Threading.Timer? pollTimer;
 
@@ -424,20 +443,30 @@
         if (session == null)
             return;
 
-        if (GetAnsweredPlayerCount() < session.Players.Count)
+        // If effects are not currently shown, toggle them on instead of advancing the game.
+        if (!showEffects)
         {
-            message =
-                $"Ikke alle har svaret endnu: {GetAnsweredPlayerCount()} / {session.Players.Count}. " +
-                "Tryk igen hvis du stadig vil vise resultater.";
-
-            if (!confirmShowResults)
+            if (GetAnsweredPlayerCount() < session.Players.Count)
             {
-                confirmShowResults = true;
-                return;
+                message =
+                    $"Ikke alle har svaret endnu: {GetAnsweredPlayerCount()} / {session.Players.Count}. " +
+                    "Tryk igen hvis du stadig vil vise resultater.";
+
+                if (!confirmShowResults)
+                {
+                    confirmShowResults = true;
+                    return;
+                }
             }
+
+            // Show effects locally (expand dropdowns). Do not advance server state yet.
+            confirmShowResults = false;
+            showEffects = true;
+            return;
         }
 
-        confirmShowResults = false;
+        // If effects already shown, proceed to advance question on server.
+        showEffects = false;
 
         var success =
             await GameSessionService.AdvanceQuestionAsync(sessionId);
