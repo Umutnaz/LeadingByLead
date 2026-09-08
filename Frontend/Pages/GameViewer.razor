@@ -168,23 +168,14 @@
                                         {
                                             var character = session?.Characters.FirstOrDefault(c => c.Id == effect.CharacterId);
                                             var name = character != null ? character.Name : effect.CharacterId;
+                                            var explanationText = !string.IsNullOrWhiteSpace(effect.Explanation)
+                                                ? effect.Explanation
+                                                : effect.Reaction;
 
-                                            var parts = effect.Changes.Select(ch =>
+                                            if (!string.IsNullOrWhiteSpace(explanationText))
                                             {
-                                                var verb = ch.Amount > 0 ? "øges" : "falder";
-                                                return $"{(ch.StatName == nameof(Core.CurrentStats.TjenesteMotivation) ? "Motivation" : ch.StatName)} {verb} med {Math.Abs(ch.Amount)}";
-                                            });
-
-                                            /* Show the longer psychological explanation (Psykologisk begrundelse) prominently for players */
-                                            @if (!string.IsNullOrWhiteSpace(effect.Explanation))
-                                            {
-                                                <p class="effect-line">@name: @string.Join(", ", parts)</p>
-                                                <p class="effect-explanation">@effect.Explanation</p>
-                                            }
-                                            else
-                                            {
-                                                /* Fallback to reaction if explanation missing */
-                                                <p class="effect-line">@name: @string.Join(", ", parts) — @effect.Reaction</p>
+                                                <p class="effect-line">@name</p>
+                                                <p class="effect-explanation">@explanationText</p>
                                             }
                                         }
                                     </div>

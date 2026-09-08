@@ -318,18 +318,20 @@ input:focus, textarea:focus, select:focus {
 }
 
 .effect-line {
-    margin: 0.3rem 0;
+    margin: 0.35rem 0 0.1rem 0;
     font-weight: 700;
-    color: var(--text-main);
-    font-size: 0.96rem;
+    color: #dfeaff;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .effect-explanation {
-    margin: 0.15rem 0 0.6rem 0.6rem;
-    color: var(--text-muted);
-    font-size: 0.88rem;
-    font-style: italic;
-    line-height: 1.25;
+    margin: 0 0 0.75rem 0;
+    color: var(--text-soft);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    font-style: normal;
 }
 
 .reaction-list .reaction,
