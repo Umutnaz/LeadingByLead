@@ -125,7 +125,7 @@ var shouldSeed =
         "true",
         StringComparison.OrdinalIgnoreCase);
 
-if (seedEnvironmentValue is null && app.Environment.IsDevelopment())
+if (seedEnvironmentValue is null)
 {
     shouldSeed = true;
 }

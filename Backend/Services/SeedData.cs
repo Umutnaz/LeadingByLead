@@ -32,7 +32,7 @@ public static class SeedData
 
         var questions = await questionRepository.GetAllAsync();
 
-        if (questions.Count == 0)
+        if (questions.Count < 6)
         {
             foreach (var question in CreateQuestions(characters))
             {
@@ -321,18 +321,115 @@ public static class SeedData
 
     private static List<Question> CreateFallbackQuestions(List<Character> characters)
     {
+        var daniel = Find(characters, "Daniel");
+        var charlie = Find(characters, "Charlie");
+        var inzo = Find(characters, "Inzo");
+        var soren = Find(characters, "Søren");
+        var ida = Find(characters, "Ida-Sofie");
+        var lene = Find(characters, "Lene");
+
         return new List<Question>
         {
             new()
             {
                 Title = "Fase 1: Opstart",
-                Description = "Fallback seed",
+                Description = "Ledelsen har besluttet, at din gruppe skal bestå af nye soldater og overflytninger fra andre grupper...",
                 RequiredSelections = 1,
                 AnswerOptions = new List<AnswerOption>
                 {
                     Option(
-                        "Fallback",
-                        Effect(Find(characters, "Daniel"), "Positiv: fallback", "Fallback explanation", Change(nameof(CurrentStats.TjenesteMotivation), 1)))
+                        "Minimalt socialt fokus\n\nIngen opstartsmøde; kendte processer implementeres hurtigt og fokus lægges på faglighed.",
+                        Effect(daniel, "Positiv: effektivitet og konkrete processer", "Opgavefokus og handlekraft matcher Daniels præstationsbehov; lavt socialt fokus koster kun lidt.", Change(nameof(CurrentStats.TjenesteMotivation), 6), Change(nameof(CurrentStats.Sociallyst), -1), Change(nameof(CurrentStats.Tillid), 3), Change(nameof(CurrentStats.Stress), -2)),
+                        Effect(charlie, "Positiv: effektivitet og konkrete processer", "Struktur og kendte standarder øger Charlies oplevede kontrol og reducerer usikkerhed.", Change(nameof(CurrentStats.TjenesteMotivation), 5), Change(nameof(CurrentStats.Sociallyst), -1), Change(nameof(CurrentStats.Tillid), 4), Change(nameof(CurrentStats.Stress), -3)),
+                        Effect(inzo, "Stærkt negativ: savner relationer", "Manglende tilhørsforhold rammer Inzos primære motivationskilde og svækker engagementet.", Change(nameof(CurrentStats.TjenesteMotivation), -9), Change(nameof(CurrentStats.Sociallyst), -10), Change(nameof(CurrentStats.Tillid), -7), Change(nameof(CurrentStats.Stress), 10)),
+                        Effect(soren, "Stærkt negativ: føler sig alene", "Lav relationel støtte kombineret med ny gruppe øger usikkerhed og oplevet belastning.", Change(nameof(CurrentStats.TjenesteMotivation), -8), Change(nameof(CurrentStats.Sociallyst), -8), Change(nameof(CurrentStats.Tillid), -9), Change(nameof(CurrentStats.Stress), 12)),
+                        Effect(ida, "Stærkt negativ: savner relationer", "Som helt ny mister Ida-Sofie både social forankring og mulighed for at skabe ejerskab.", Change(nameof(CurrentStats.TjenesteMotivation), -8), Change(nameof(CurrentStats.Sociallyst), -9), Change(nameof(CurrentStats.Tillid), -7), Change(nameof(CurrentStats.Stress), 9)),
+                        Effect(lene, "Svagt positiv: effektivitet", "Tydelighed hjælper, men den manglende relationsopbygning begrænser gevinsten.", Change(nameof(CurrentStats.TjenesteMotivation), 3), Change(nameof(CurrentStats.Tillid), 2), Change(nameof(CurrentStats.Stress), -1)))
+                }
+            },
+            new()
+            {
+                Title = "Næste skridt i fase 1",
+                Description = "Vælg tre action cards...",
+                RequiredSelections = 3,
+                AnswerOptions = new List<AnswerOption>
+                {
+                    Option(
+                        "Fremtiden er lys\n\nMøde om gruppens fremtid med ensidigt fokus på styrker og positive muligheder.",
+                        Effect(daniel, "Mildt negativ: savner realisme", "Ensided positivitet uden konkret plan reducerer troværdighed.", Change(nameof(CurrentStats.TjenesteMotivation), -5), Change(nameof(CurrentStats.Tillid), -5), Change(nameof(CurrentStats.Stress), 4)),
+                        Effect(charlie, "Mildt negativ: savner konkret plan", "Manglende data, risici og struktur skader tillid til ledelsen.", Change(nameof(CurrentStats.TjenesteMotivation), -6), Change(nameof(CurrentStats.Tillid), -6), Change(nameof(CurrentStats.Stress), 5)),
+                        Effect(inzo, "Stærkt positiv: begejstret for fremtidsbilledet", "Energi og positiv social framing skaber håb og engagement.", Change(nameof(CurrentStats.TjenesteMotivation), 7), Change(nameof(CurrentStats.Sociallyst), 4), Change(nameof(CurrentStats.Tillid), 5), Change(nameof(CurrentStats.Stress), -3)),
+                        Effect(soren, "Stærkt negativ: kan ikke se sin plads", "Uklar rolle og ren positiv framing øger usikkerhed og oplevet isolation.", Change(nameof(CurrentStats.TjenesteMotivation), -8), Change(nameof(CurrentStats.Sociallyst), -4), Change(nameof(CurrentStats.Tillid), -8), Change(nameof(CurrentStats.Stress), 9)),
+                        Effect(ida, "Stærkt positiv: begejstret for fremtidsbilledet", "Visionen understøtter kreativitet, mulighedstænkning og tilhørighed.", Change(nameof(CurrentStats.TjenesteMotivation), 7), Change(nameof(CurrentStats.Sociallyst), 4), Change(nameof(CurrentStats.Tillid), 5), Change(nameof(CurrentStats.Stress), -3)),
+                        Effect(lene, "Mildt negativ: savner realistisk billede", "Optimisme uden håndtering af bekymringer opleves som lav omsorg og troværdighed.", Change(nameof(CurrentStats.TjenesteMotivation), -4), Change(nameof(CurrentStats.Sociallyst), 1), Change(nameof(CurrentStats.Tillid), -5), Change(nameof(CurrentStats.Stress), 5)))
+                }
+            },
+            new()
+            {
+                Title = "Fase 2: Drift",
+                Description = "Gruppen er etableret. Nu skal de trænes til at håndtere komplekse scenarier...",
+                RequiredSelections = 1,
+                AnswerOptions = new List<AnswerOption>
+                {
+                    Option(
+                        "Fælles refleksion\n\nTemperaturmåling og åben drøftelse af udfordringer.",
+                        Effect(daniel, "Positiv: skaber klarhed", "Åben refleksion skaber mindre usikkerhed og mere handlekraft.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Tillid), 3), Change(nameof(CurrentStats.Stress), -2)),
+                        Effect(charlie, "Positiv: struktur og læring", "Tydelig feedback og tydelig styringslogik styrker kvaliteten.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Tillid), 4), Change(nameof(CurrentStats.Stress), -2)),
+                        Effect(inzo, "Positiv: føler sig hørt", "Fælles drøftelse styrker tilhørsforhold og engagement.", Change(nameof(CurrentStats.TjenesteMotivation), 5), Change(nameof(CurrentStats.Sociallyst), 5), Change(nameof(CurrentStats.Tillid), 4), Change(nameof(CurrentStats.Stress), -3)),
+                        Effect(soren, "Positiv: tryghed i samtale", "Det styrker psykologisk sikkerhed og reducerer overbelastning.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Sociallyst), 3), Change(nameof(CurrentStats.Tillid), 6), Change(nameof(CurrentStats.Stress), -4)),
+                        Effect(ida, "Positiv: kreativ og inkluderende", "Refleksion styrker både identitet og ejerskab.", Change(nameof(CurrentStats.TjenesteMotivation), 5), Change(nameof(CurrentStats.Sociallyst), 5), Change(nameof(CurrentStats.Tillid), 5), Change(nameof(CurrentStats.Stress), -3)),
+                        Effect(lene, "Positiv: relation og sikkerhed", "Lene får ro og mulighed for at løfte bekymringer.", Change(nameof(CurrentStats.TjenesteMotivation), 3), Change(nameof(CurrentStats.Sociallyst), 2), Change(nameof(CurrentStats.Tillid), 5), Change(nameof(CurrentStats.Stress), -2)))
+                }
+            },
+            new()
+            {
+                Title = "Næste skridt i fase 2",
+                Description = "Vælg tre action cards...",
+                RequiredSelections = 3,
+                AnswerOptions = new List<AnswerOption>
+                {
+                    Option(
+                        "Vi gør det sammen\n\nGruppen drøfter, hvad der virker, hvad der ikke virker, og hvordan den kommer i mål inden for givne rammer.",
+                        Effect(daniel, "Positiv: får medansvar for retningen", "Begrænset voice tilfredsstiller autonomi uden at fjerne målfokus.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Sociallyst), 1), Change(nameof(CurrentStats.Tillid), 4), Change(nameof(CurrentStats.Stress), -2)),
+                        Effect(charlie, "Mildt negativ: retningen er stadig ukonkret", "Dialog uden tilstrækkelig beslutning og standarder opleves som ineffektiv.", Change(nameof(CurrentStats.TjenesteMotivation), -4), Change(nameof(CurrentStats.Tillid), -4), Change(nameof(CurrentStats.Stress), 4)),
+                        Effect(inzo, "Positiv: dialog og fælles retning", "Involvering styrker både relation og ejerskab.", Change(nameof(CurrentStats.TjenesteMotivation), 5), Change(nameof(CurrentStats.Sociallyst), 4), Change(nameof(CurrentStats.Tillid), 5), Change(nameof(CurrentStats.Stress), -4)),
+                        Effect(soren, "Positiv: får tid og mulighed for at bidrage", "Voice og tydelige rammer øger psykologisk sikkerhed.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Sociallyst), 3), Change(nameof(CurrentStats.Tillid), 6), Change(nameof(CurrentStats.Stress), -5)),
+                        Effect(ida, "Positiv: forslag er velkomne", "Autonomi og kreativt bidrag styrker motivation og tillid.", Change(nameof(CurrentStats.TjenesteMotivation), 5), Change(nameof(CurrentStats.Sociallyst), 4), Change(nameof(CurrentStats.Tillid), 5), Change(nameof(CurrentStats.Stress), -4)),
+                        Effect(lene, "Positiv: fælles dialog inden for rammer", "Inklusion og tydelighed giver både relationel og procedural tillid.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Sociallyst), 3), Change(nameof(CurrentStats.Tillid), 5), Change(nameof(CurrentStats.Stress), -4)))
+                }
+            },
+            new()
+            {
+                Title = "Fase 3: Overdragelse",
+                Description = "Det er tid til at finde en ny fører. Hvilken strategi vælger du?",
+                RequiredSelections = 1,
+                AnswerOptions = new List<AnswerOption>
+                {
+                    Option(
+                        "Klar lederrolle\n\nFøreren sætter retningen og instruerer soldaterne tydeligt.",
+                        Effect(daniel, "Positiv: tydelig retning og ansvar", "Klar kommando reducerer uklarhed og matcher opgaveidentitet.", Change(nameof(CurrentStats.TjenesteMotivation), 6), Change(nameof(CurrentStats.Tillid), 5), Change(nameof(CurrentStats.Stress), -3)),
+                        Effect(charlie, "Positiv: tydelige standarder", "Rolle- og procesklarhed øger tillid og reducerer usikkerhed.", Change(nameof(CurrentStats.TjenesteMotivation), 5), Change(nameof(CurrentStats.Tillid), 6), Change(nameof(CurrentStats.Stress), -4)),
+                        Effect(inzo, "Stærkt negativ: føler sig overkørt", "Lav voice og relationel respekt reducerer tillid og social deltagelse.", Change(nameof(CurrentStats.TjenesteMotivation), -7), Change(nameof(CurrentStats.Sociallyst), -6), Change(nameof(CurrentStats.Tillid), -9), Change(nameof(CurrentStats.Stress), 9)),
+                        Effect(soren, "Stærkt negativ: føler sig trådt på", "Direktiv stil uden tryghed øger usikkerhed og hæmmer deltagelse.", Change(nameof(CurrentStats.TjenesteMotivation), -8), Change(nameof(CurrentStats.Sociallyst), -5), Change(nameof(CurrentStats.Tillid), -11), Change(nameof(CurrentStats.Stress), 12)),
+                        Effect(ida, "Stærkt negativ: føler sig overkørt", "Kontrollerende stil frustrerer autonomi og procedural retfærdighed.", Change(nameof(CurrentStats.TjenesteMotivation), -7), Change(nameof(CurrentStats.Sociallyst), -5), Change(nameof(CurrentStats.Tillid), -10), Change(nameof(CurrentStats.Stress), 10)),
+                        Effect(lene, "Positiv: tydelighed", "Klar retning giver sikkerhed, selv om relationel involvering er lav.", Change(nameof(CurrentStats.TjenesteMotivation), 3), Change(nameof(CurrentStats.Tillid), 4), Change(nameof(CurrentStats.Stress), -3)))
+                }
+            },
+            new()
+            {
+                Title = "Næste skridt i fase 3",
+                Description = "Vælg tre action cards...",
+                RequiredSelections = 3,
+                AnswerOptions = new List<AnswerOption>
+                {
+                    Option(
+                        "Lad os tale om det\n\nIndividuelle samtaler om situationen, behov og fælles præstation.",
+                        Effect(daniel, "Positiv: egne behov anerkendes", "Kort, målrettet individuel dialog giver voice uden gruppemøde.", Change(nameof(CurrentStats.TjenesteMotivation), 3), Change(nameof(CurrentStats.Sociallyst), 1), Change(nameof(CurrentStats.Tillid), 4), Change(nameof(CurrentStats.Stress), -2)),
+                        Effect(charlie, "Mildt negativ: vil videre", "Mere samtale uden nye fakta opleves som lav effektivitet.", Change(nameof(CurrentStats.TjenesteMotivation), -3), Change(nameof(CurrentStats.Sociallyst), -1), Change(nameof(CurrentStats.Tillid), -3), Change(nameof(CurrentStats.Stress), 3)),
+                        Effect(inzo, "Positiv: føler sig hørt", "Individuel opmærksomhed styrker relationel tillid og tilhørighed.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Sociallyst), 4), Change(nameof(CurrentStats.Tillid), 6), Change(nameof(CurrentStats.Stress), -4)),
+                        Effect(soren, "Positiv: føler sig hørt", "Samtalen reducerer usikkerhed og giver sikker kanal til bekymringer.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Sociallyst), 3), Change(nameof(CurrentStats.Tillid), 7), Change(nameof(CurrentStats.Stress), -6)),
+                        Effect(ida, "Positiv: behov og idéer anerkendes", "Autonomistøtte og relation øger tillid.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Sociallyst), 4), Change(nameof(CurrentStats.Tillid), 6), Change(nameof(CurrentStats.Stress), -4)),
+                        Effect(lene, "Positiv: relation og omsorg", "Individuel dialog passer til Lenes relationelle orientering.", Change(nameof(CurrentStats.TjenesteMotivation), 4), Change(nameof(CurrentStats.Sociallyst), 3), Change(nameof(CurrentStats.Tillid), 6), Change(nameof(CurrentStats.Stress), -4)))
                 }
             }
         };
