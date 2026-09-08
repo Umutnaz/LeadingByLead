@@ -1,3 +1,4 @@
+﻿using System.Text.Json;
 using Backend.Repositories;
 using Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,7 +35,9 @@ public static class SeedData
         if (questions.Count == 0)
         {
             foreach (var question in CreateQuestions(characters))
+            {
                 await questionRepository.CreateAsync(question);
+            }
         }
     }
 
@@ -54,7 +57,6 @@ public static class SeedData
                     Stress = 32
                 }
             },
-
             new()
             {
                 Name = "Charlie - LMG1",
@@ -67,7 +69,6 @@ public static class SeedData
                     Stress = 30
                 }
             },
-
             new()
             {
                 Name = "Inzo - GV3",
@@ -80,7 +81,6 @@ public static class SeedData
                     Stress = 25
                 }
             },
-
             new()
             {
                 Name = "Søren - LMG2",
@@ -93,7 +93,6 @@ public static class SeedData
                     Stress = 40
                 }
             },
-
             new()
             {
                 Name = "Ida-Sofie - GV2",
@@ -106,7 +105,6 @@ public static class SeedData
                     Stress = 34
                 }
             },
-
             new()
             {
                 Name = "Lene - GV4",
@@ -118,1141 +116,246 @@ public static class SeedData
                     Tillid = 70,
                     Stress = 38
                 }
-            },
-        };
-    }
-
-    private static List<Question> CreateQuestions(
-        List<Character> characters)
-    {
-        var søren = Find(characters, "Søren");
-        var ida = Find(characters, "Ida-Sofie");
-        var lene = Find(characters, "Lene");
-        var daniel = Find(characters, "Daniel");
-        var charlie = Find(characters, "Charlie");
-        var inzo = Find(characters, "Inzo");
-
-        return new List<Question>
-        {
-            CreatePhaseOneQuestion(
-                søren,
-                ida,
-                lene,
-                daniel,
-                charlie,
-                inzo),
-
-            CreatePhaseOneActions(
-                søren,
-                ida,
-                lene,
-                daniel,
-                charlie,
-                inzo),
-
-            CreatePhaseTwoQuestion(
-                søren,
-                ida,
-                lene,
-                daniel,
-                charlie,
-                inzo),
-
-            CreatePhaseTwoActions(
-                søren,
-                ida,
-                lene,
-                daniel,
-                charlie,
-                inzo),
-
-            CreatePhaseThreeQuestion(
-                søren,
-                ida,
-                lene,
-                daniel,
-                charlie,
-                inzo),
-
-            CreatePhaseThreeActions(
-                søren,
-                ida,
-                lene,
-                daniel,
-                charlie,
-                inzo)
-        };
-    }
-
-    private static Question CreatePhaseOneQuestion(
-        Character søren,
-        Character ida,
-        Character lene,
-        Character daniel,
-        Character charlie,
-        Character inzo)
-    {
-        return new Question
-        {
-            RequiredSelections = 1,
-
-            Title = "Fase 1: Opstart",
-
-            Description =
-                "Ledelsen har besluttet, at din gruppe skal bestå af nye " +
-                "soldater og overflytninger fra andre grupper. Soldaterne er " +
-                "forvirrede over, hvem der er i deres gruppe, søger mod gamle " +
-                "relationer og er trætte af at træne med andre grupper. De " +
-                "erfarne begynder at kede sig, og forskellige standarder gør " +
-                "arbejdet besværligt.\n\n" +
-                "Hvilken prioritering vælger du i din første periode som fører?",
-
-            AnswerOptions = new List<AnswerOption>
-            {
-                Option(
-                    "Minimalt socialt fokus\n\n" +
-                    "Der afholdes intet opstartsmøde. Gruppen mødes første " +
-                    "gang til klar til kamp. Du implementerer de processer, " +
-                    "du allerede kender, og prioriterer det faglige arbejde.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Tillid), 5),
-                        Change(nameof(CurrentStats.Stress), -5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Sociallyst), -10),
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Sociallyst), -10),
-                        Change(nameof(CurrentStats.Tillid), -5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), -10),
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5))
-                ),
-
-                Option(
-                    "Mindre socialt fokus\n\n" +
-                    "Du afholder et kort opstartsmøde, hvor alle præsenterer " +
-                    "sig selv. Derefter går gruppen direkte videre til den " +
-                    "faglige gennemgang.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Sociallyst), -5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Sociallyst), -5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), -5))
-                ),
-
-                Option(
-                    "Mere socialt fokus\n\n" +
-                    "Du bruger god tid på, at gruppen lærer hinanden at kende. " +
-                    "Du foreslår forbedringer til ineffektive processer og " +
-                    "holder pauser for at få alle med.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Sociallyst), 5),
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 10)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Stress), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 10))
-                ),
-
-                Option(
-                    "Maksimalt socialt fokus\n\n" +
-                    "Du blokbooker to weekender, hvor gruppen skal lære " +
-                    "hinanden at kende. De erfarne brainstormer processerne, " +
-                    "og gruppen starter i teorilokalet med god tid til hygge.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), 10),
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Sociallyst), 10),
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Sociallyst), 5),
-                        Change(nameof(CurrentStats.Tillid), 10)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -10)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Stress), 10)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 10),
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5))
-                )
             }
         };
     }
 
-    private static Question CreatePhaseOneActions(
-        Character søren,
-        Character ida,
-        Character lene,
-        Character daniel,
-        Character charlie,
-        Character inzo)
+    private static List<Question> CreateQuestions(List<Character> characters)
     {
-        return new Question
+        var questions = new List<Question>();
+
+        var root = TryLoadSeedJson();
+        if (root == null)
         {
-            RequiredSelections = 3,
+            return CreateFallbackQuestions(characters);
+        }
 
-            Title = "Næste skridt i fase 1",
+        var rootValue = root.Value;
 
-            Description =
-                "Vælg tre action cards, som beskriver, hvordan du vil føre " +
-                "gruppen videre gennem opstartsfasen.",
-
-            AnswerOptions = new List<AnswerOption>
-            {
-                Option(
-                    "FREMTIDEN ER LYS\n\n" +
-                    "Du samler gruppen til et møde om fremtiden og fremhæver " +
-                    "udelukkende gruppens kompetencer og positive muligheder.",
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5))
-                ),
-
-                Option(
-                    "VI GØR DET SAMMEN\n\n" +
-                    "Gruppen går i dialog om, hvad der fungerer, og hvad der " +
-                    "ikke fungerer. Forslag er velkomne inden for rammerne.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 10)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 5))
-                ),
-
-                Option(
-                    "KEND DIN GRUPPE\n\n" +
-                    "Alle laver en kort præsentation om sig selv og bliver " +
-                    "opfordret til at interagere med hinanden.",
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Sociallyst), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Sociallyst), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 10)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "JEG HAR KOMMANDOEN\n\n" +
-                    "Du gør det klart, at gruppen er dit ansvar, og du sætter " +
-                    "retningen for, hvordan målene skal nås.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5))
-                ),
-
-                Option(
-                    "LAD OS TALE OM DET\n\n" +
-                    "Du holder individuelle samtaler med alle og spørger, " +
-                    "hvordan de oplever situationen.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), -5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 10)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 5))
-                ),
-
-                Option(
-                    "LAD OS PRØVE\n\n" +
-                    "Du accepterer gruppens faglige forskelligheder og lader " +
-                    "dem lære gennem fejl frem for at stoppe aktiviteten.",
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "TRÆK PÅ KOMPETENCER\n\n" +
-                    "Du delegerer opgaver til de soldater, der møder stabilt " +
-                    "op og risikerer at stagnere fagligt.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10))
-                ),
-
-                Option(
-                    "JEG HAR BRUG FOR DIG\n\n" +
-                    "Du giver kritiske opgaver til de soldater, som virker til " +
-                    "at have mistet motivationen.",
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10),
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Tillid), 5))
-                )
-            }
-        };
-    }
-
-    private static Question CreatePhaseTwoQuestion(
-        Character søren,
-        Character ida,
-        Character lene,
-        Character daniel,
-        Character charlie,
-        Character inzo)
-    {
-        return new Question
+        var phaseMap = new Dictionary<string, string>
         {
-            RequiredSelections = 1,
-
-            Title = "Fase 2: Drift",
-
-            Description =
-                "Uddannelsen har kørt i et par måneder. Gruppen er begyndt " +
-                "at fungere socialt, men de nye har svært ved at følge med, " +
-                "mens de erfarne ønsker større kompleksitet. Trusselsbilledet " +
-                "øger samtidig presset for at hæve det faglige niveau.\n\n" +
-                "Hvilket niveau af kompleksitet vælger du?",
-
-            AnswerOptions = new List<AnswerOption>
-            {
-                Option(
-                    "Minimal kompleksitet\n\n" +
-                    "Gruppen går tilbage til det grundlæggende niveau. Tempoet " +
-                    "reduceres, og avancerede scenarier udskydes.",
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Stress), -10),
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Stress), -5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -10)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5))
-                ),
-
-                Option(
-                    "Moderat kompleksitet\n\n" +
-                    "Niveauet øges gradvist, og de soldater, der har svært ved " +
-                    "at følge med, får målrettet støtte.",
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Stress), -5),
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5))
-                ),
-
-                Option(
-                    "Høj kompleksitet\n\n" +
-                    "Realistiske og komplekse opgaver bliver normen. Det " +
-                    "accepteres, at ikke alle kan følge med hele tiden.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5),
-                        Change(nameof(CurrentStats.Stress), 5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Stress), 10)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "Maksimal kompleksitet\n\n" +
-                    "Gruppen træner, som om regionsøvelsen var næste måned, " +
-                    "med højt tempo og maksimal sværhedsgrad.",
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10),
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), 10)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Stress), 10),
-                        Change(nameof(CurrentStats.TjenesteMotivation), -10)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Stress), 10),
-                        Change(nameof(CurrentStats.Tillid), -5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5))
-                )
-            }
+            ["Opstart"] = "Fase 1: Opstart",
+            ["Drift"] = "Fase 2: Drift",
+            ["Overdragelse"] = "Fase 3: Overdragelse"
         };
-    }
 
-    private static Question CreatePhaseTwoActions(
-        Character søren,
-        Character ida,
-        Character lene,
-        Character daniel,
-        Character charlie,
-        Character inzo)
-    {
-        return new Question
+        var phaseDescriptions = new Dictionary<string, string>
         {
-            RequiredSelections = 3,
-
-            Title = "Næste skridt i fase 2",
-
-            Description =
-                "Vælg tre action cards, som beskriver, hvordan du vil " +
-                "fortsætte gruppens udvikling i driftsfasen.",
-
-            AnswerOptions = new List<AnswerOption>
-            {
-                Option(
-                    "MAKKERORDNING\n\n" +
-                    "Nye og erfarne soldater kobles sammen. De erfarne får " +
-                    "ansvar for at udvikle de nye.",
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Tillid), 10),
-                        Change(nameof(CurrentStats.Stress), -5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5))
-                ),
-
-                Option(
-                    "BRUG DINE STYRKER\n\n" +
-                    "Alle får ansvar inden for deres egne styrker, og rollerne " +
-                    "tilpasses den enkelte.",
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5))
-                ),
-
-                Option(
-                    "VI SKRUER OP\n\n" +
-                    "Sværhedsgraden øges markant, og gruppen træner over det " +
-                    "forventede niveau.",
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Stress), 10)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "HVAD SIGER GRUPPEN?\n\n" +
-                    "Du gennemfører en temperaturmåling, hvor udfordringer " +
-                    "drøftes åbent.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 10)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 5))
-                ),
-
-                Option(
-                    "FEJL ER LÆRING\n\n" +
-                    "Fejl accepteres som en del af læringen, og gruppen " +
-                    "evaluerer åbent efter aktiviteter.",
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Stress), -5),
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "TALENTER I SPIDSEN\n\n" +
-                    "De dygtigste får ansvar for at gennemføre dele af " +
-                    "undervisningen.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 5))
-                ),
-
-                Option(
-                    "VIS MIG RESULTATER\n\n" +
-                    "Du opstiller konkrete mål, og gruppen måles på sin " +
-                    "progression.",
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "EN DEL AF HOLDET\n\n" +
-                    "Du gennemfører en aktivitet uden uddannelsesfokus, hvor " +
-                    "fællesskab og relationer prioriteres.",
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Sociallyst), 10),
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Sociallyst), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 10)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5))
-                )
-            }
+            ["Opstart"] = "Ledelsen har besluttet, at din gruppe skal bestå af nye soldater og overflytninger fra andre grupper...",
+            ["Drift"] = "Gruppen er etableret. Nu skal de trænes til at håndtere komplekse scenarier...",
+            ["Overdragelse"] = "Det er tid til at finde en ny fører. Hvilken strategi vælger du?"
         };
-    }
 
-    private static Question CreatePhaseThreeQuestion(
-        Character søren,
-        Character ida,
-        Character lene,
-        Character daniel,
-        Character charlie,
-        Character inzo)
-    {
-        return new Question
+        foreach (var phaseName in new[] { "Opstart", "Drift", "Overdragelse" })
         {
-            RequiredSelections = 1,
-
-            Title = "Fase 3: Overdragelse",
-
-            Description =
-                "Du har brækket benet, og din tid som gruppefører er slut. " +
-                "Der er kun tre måneder til regionsøvelsen. Motivationen er " +
-                "faldet, og du skal finde din afløser internt i gruppen.\n\n" +
-                "Hvem vælger du som ny gruppefører?",
-
-            AnswerOptions = new List<AnswerOption>
+            var phaseQuestion = new Question
             {
-                Option(
-                    "Søren\n\n" +
-                    "Socialt fokuseret, reserveret og overvejer stadig rollen.",
+                Title = phaseMap[phaseName],
+                Description = phaseDescriptions[phaseName],
+                RequiredSelections = 1,
+                AnswerOptions = BuildAnswerOptions(characters, rootValue, phaseName, false)
+            };
 
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10),
-                        Change(nameof(CurrentStats.Tillid), 5)),
+            var phaseActions = new Question
+            {
+                Title = phaseName switch
+                {
+                    "Opstart" => "Næste skridt i fase 1",
+                    "Drift" => "Næste skridt i fase 2",
+                    _ => "Næste skridt i fase 3"
+                },
+                Description = "Vælg tre action cards...",
+                RequiredSelections = 3,
+                AnswerOptions = BuildAnswerOptions(characters, rootValue, phaseName, true)
+            };
 
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 5)),
+            questions.Add(phaseQuestion);
+            questions.Add(phaseActions);
+        }
 
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5))
-                ),
-
-                Option(
-                    "Inzo\n\n" +
-                    "Socialt fokuseret, udadvendt og aktivt interesseret i rollen.",
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10),
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Sociallyst), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "Charlie\n\n" +
-                    "Opgavefokuseret, reserveret og overvejer stadig rollen.",
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10),
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "Daniel\n\n" +
-                    "Opgavefokuseret, udadvendt og aktivt interesseret i rollen.",
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10),
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Stress), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), -5))
-                )
-            }
-        };
+        return questions;
     }
 
-    private static Question CreatePhaseThreeActions(
-        Character søren,
-        Character ida,
-        Character lene,
-        Character daniel,
-        Character charlie,
-        Character inzo)
+    private static List<AnswerOption> BuildAnswerOptions(List<Character> characters, JsonElement root, string phaseName, bool isAction)
     {
-        return new Question
+        var records = root.TryGetProperty(isAction ? "action_cards" : "gears", out var array)
+            ? array
+            : default;
+
+        if (records.ValueKind != JsonValueKind.Array)
         {
-            RequiredSelections = 3,
+            return new List<AnswerOption>();
+        }
 
-            Title = "Næste skridt i fase 3",
+        var groups = new Dictionary<int, List<JsonElement>>();
 
-            Description =
-                "Vælg tre action cards, som beskriver, hvordan du vil " +
-                "gennemføre overdragelsen til den nye gruppefører.",
-
-            AnswerOptions = new List<AnswerOption>
+        foreach (var item in records.EnumerateArray())
+        {
+            if (!item.TryGetProperty("Fase", out var phase) || phase.GetString() != phaseName)
             {
-                Option(
-                    "DEN NYE GRUPPEFØRER\n\n" +
-                    "Du præsenterer afløseren for gruppen og forklarer, hvorfor " +
-                    "personen er valgt, og hvad du forventer.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 10)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5))
-                ),
-
-                Option(
-                    "VI SKABER RETNING SAMMEN\n\n" +
-                    "Gruppen diskuterer, hvordan de bedst kommer gennem " +
-                    "overgangen, og alle får mulighed for at bidrage.",
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 10)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5))
-                ),
-
-                Option(
-                    "MESTERLÆRE\n\n" +
-                    "Afløseren leder aktiviteter under dit opsyn, så gruppen " +
-                    "oplever et gradvist lederskifte.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), -5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 5))
-                ),
-
-                Option(
-                    "VI HOLDER FAST I PLANEN\n\n" +
-                    "Du understreger, at gruppens mål ikke har ændret sig, og " +
-                    "at regionsøvelsen fortsat er det vigtigste fokus.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "JEG HAR BRUG FOR DIG\n\n" +
-                    "Soldaterne får konkrete ansvarsområder i overgangen, så " +
-                    "alle har en tydelig rolle.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 10)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5))
-                ),
-
-                Option(
-                    "LAD OS TALE BEKYMRINGER\n\n" +
-                    "Du spørger åbent ind til gruppens usikkerheder omkring " +
-                    "lederskiftet, og ingen emner er forbudte.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), -5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Stress), -10),
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 5))
-                ),
-
-                Option(
-                    "VIS MIG DU KAN\n\n" +
-                    "Afløseren leder en krævende aktivitet, så gruppen kan se " +
-                    "personen i aktion.",
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        charlie,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Stress), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Stress), 5))
-                ),
-
-                Option(
-                    "VI ER STØRRE END ÉN PERSON\n\n" +
-                    "Du minder gruppen om alt det, de allerede har opnået, og " +
-                    "flytter fokus fra føreren til fællesskabet.",
-
-                    Effect(
-                        søren,
-                        Change(nameof(CurrentStats.Tillid), 5)),
-
-                    Effect(
-                        ida,
-                        Change(nameof(CurrentStats.TjenesteMotivation), 5)),
-
-                    Effect(
-                        lene,
-                        Change(nameof(CurrentStats.Tillid), 10)),
-
-                    Effect(
-                        inzo,
-                        Change(nameof(CurrentStats.Sociallyst), 10)),
-
-                    Effect(
-                        daniel,
-                        Change(nameof(CurrentStats.TjenesteMotivation), -5))
-                )
+                continue;
             }
-        };
+
+            var key = isAction ? item.GetProperty("Kort").GetInt32() : item.GetProperty("Gear").GetInt32();
+            if (!groups.TryGetValue(key, out var list))
+            {
+                list = new List<JsonElement>();
+                groups[key] = list;
+            }
+
+            list.Add(item.Clone());
+        }
+
+        var options = new List<AnswerOption>();
+
+        foreach (var ordered in groups.OrderBy(kvp => kvp.Key))
+        {
+            var entries = ordered.Value;
+            var first = entries[0];
+
+            var text = isAction
+                ? $"{first.GetProperty("Kortnavn").GetString()}\n\n{first.GetProperty("Beskrivelse").GetString()}"
+                : $"{first.GetProperty("Gearnavn").GetString()}\n\n{first.GetProperty("Beskrivelse").GetString()}";
+
+            var effects = new List<CharacterEffect>();
+
+            foreach (var entry in entries)
+            {
+                var personName = entry.GetProperty("Person").GetString();
+                var character = characters.FirstOrDefault(c => c.Name.Contains(personName ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+                if (character == null)
+                {
+                    continue;
+                }
+
+                var reaction = entry.TryGetProperty("Reaktion", out var reactionProp)
+                    ? reactionProp.GetString() ?? string.Empty
+                    : string.Empty;
+
+                var explanation = entry.TryGetProperty("Psykologisk begrundelse", out var explanationProp)
+                    ? explanationProp.GetString() ?? string.Empty
+                    : string.Empty;
+
+                var changes = new List<StatChange>();
+                AddChange(changes, nameof(CurrentStats.TjenesteMotivation), entry, "Δ Tjenestemotivation");
+                AddChange(changes, nameof(CurrentStats.Sociallyst), entry, "Δ Sociale lyst");
+                AddChange(changes, nameof(CurrentStats.Tillid), entry, "Δ Tillid");
+                AddChange(changes, nameof(CurrentStats.Stress), entry, "Δ Stress");
+
+                effects.Add(new CharacterEffect
+                {
+                    CharacterId = character.Id,
+                    Reaction = reaction,
+                    Explanation = explanation,
+                    Changes = changes
+                });
+            }
+
+            options.Add(Option(text, effects.ToArray()));
+        }
+
+        return options;
     }
 
-    private static Character Find(
-        IEnumerable<Character> characters,
-        string name)
+    private static void AddChange(List<StatChange> changes, string propertyName, JsonElement entry, string jsonKey)
     {
-        return characters.First(character =>
-            character.Name.Contains(
-                name,
-                StringComparison.OrdinalIgnoreCase));
+        if (!entry.TryGetProperty(jsonKey, out var value))
+        {
+            return;
+        }
+
+        var amount = value.TryGetInt32(out var parsed) ? parsed : 0;
+        if (amount == 0)
+        {
+            return;
+        }
+
+        changes.Add(new StatChange
+        {
+            StatName = propertyName,
+            Amount = amount
+        });
     }
 
-    private static AnswerOption Option(
-        string text,
-        params CharacterEffect[] effects)
+    private static AnswerOption Option(string text, params CharacterEffect[] effects)
     {
         return new AnswerOption
         {
             Text = text,
-
             CharacterEffects = effects
-                .Where(effect => effect.Changes.Count > 0)
+                .Where(e => e.Changes.Count > 0)
                 .ToList()
         };
     }
 
-    private static CharacterEffect Effect(
-        Character character,
-        params StatChange[] changes)
+    private static JsonElement? TryLoadSeedJson()
+    {
+        var candidatePaths = new[]
+        {
+            Path.Combine(Directory.GetCurrentDirectory(), "seeddata_dump.json"),
+            Path.Combine(AppContext.BaseDirectory, "seeddata_dump.json"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "seeddata_dump.json"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "seeddata_dump.json"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "seeddata_dump.json")
+        };
+
+        foreach (var candidate in candidatePaths)
+        {
+            var fullPath = Path.GetFullPath(candidate);
+            if (File.Exists(fullPath))
+            {
+                try
+                {
+                    using var stream = File.OpenRead(fullPath);
+                    return JsonDocument.Parse(stream).RootElement.Clone();
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static List<Question> CreateFallbackQuestions(List<Character> characters)
+    {
+        return new List<Question>
+        {
+            new()
+            {
+                Title = "Fase 1: Opstart",
+                Description = "Fallback seed",
+                RequiredSelections = 1,
+                AnswerOptions = new List<AnswerOption>
+                {
+                    Option(
+                        "Fallback",
+                        Effect(Find(characters, "Daniel"), "Positiv: fallback", "Fallback explanation", Change(nameof(CurrentStats.TjenesteMotivation), 1)))
+                }
+            }
+        };
+    }
+
+    private static Character Find(List<Character> characters, string name)
+    {
+        return characters.First(c => c.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static CharacterEffect Effect(Character character, string reaction, string explanation, params StatChange[] changes)
     {
         return new CharacterEffect
         {
             CharacterId = character.Id,
-
-            Changes = changes
-                .Where(change => change.Amount != 0)
-                .ToList()
+            Reaction = reaction,
+            Explanation = explanation,
+            Changes = changes.Where(c => c.Amount != 0).ToList()
         };
     }
 
-    private static StatChange Change(
-        string statName,
-        int amount)
+    private static StatChange Change(string statName, int amount)
     {
-        var allowedAmounts = new[]
-        {
-            -10,
-            -5,
-            5,
-            10
-        };
-
-        if (!allowedAmounts.Contains(amount))
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(amount),
-                "Seed-påvirkninger skal være -10, -5, 5 eller 10.");
-        }
-
-        return new StatChange
-        {
-            StatName = statName,
-            Amount = amount
-        };
+        return new StatChange { StatName = statName, Amount = amount };
     }
 }
