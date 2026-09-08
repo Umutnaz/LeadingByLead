@@ -165,6 +165,28 @@ public class GameSessionsController : ControllerBase
         return null;
     }
 
+    private static void EnsureQuestionExplanations(GameSession session)
+    {
+        if (session == null)
+            return;
+
+        foreach (var question in session.Questions)
+        {
+            foreach (var option in question.AnswerOptions)
+            {
+                foreach (var effect in option.CharacterEffects)
+                {
+                    if (string.IsNullOrWhiteSpace(effect.Explanation))
+                    {
+                        var explanation = FindExplanationForOptionFlexible(option.Text ?? string.Empty, effect.CharacterId);
+                        if (!string.IsNullOrWhiteSpace(explanation))
+                            effect.Explanation = explanation;
+                    }
+                }
+            }
+        }
+    }
+
     private static string? FindExplanationForOption(string optionText, string characterId)
     {
         if (string.IsNullOrWhiteSpace(optionText) || string.IsNullOrWhiteSpace(characterId))
@@ -178,28 +200,33 @@ public class GameSessionsController : ControllerBase
         {
             var root = _excelDoc.RootElement;
 
-            // Search in gears
+            static string? ReadExplanation(System.Text.Json.JsonElement item)
+            {
+                if (item.TryGetProperty("Psykologisk begrundelse", out var expl) && !string.IsNullOrWhiteSpace(expl.GetString()))
+                    return expl.GetString();
+                return null;
+            }
+
             if (root.TryGetProperty("gears", out var gears))
             {
                 foreach (var item in gears.EnumerateArray())
                 {
                     if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
                     {
-                        // Try match by Gearnavn contained in option text
                         if (item.TryGetProperty("Gearnavn", out var gn))
                         {
                             var gearName = gn.GetString() ?? string.Empty;
                             if (!string.IsNullOrWhiteSpace(gearName) && optionText.Contains(gearName, StringComparison.OrdinalIgnoreCase))
                             {
-                                if (item.TryGetProperty("Psykologisk begrundelse", out var expl))
-                                    return expl.GetString();
+                                var found = ReadExplanation(item);
+                                if (!string.IsNullOrWhiteSpace(found))
+                                    return found;
                             }
                         }
                     }
                 }
             }
 
-            // Search in action_cards (kortnavn)
             if (root.TryGetProperty("action_cards", out var cards))
             {
                 foreach (var item in cards.EnumerateArray())
@@ -211,23 +238,24 @@ public class GameSessionsController : ControllerBase
                             var cardName = kn.GetString() ?? string.Empty;
                             if (!string.IsNullOrWhiteSpace(cardName) && optionText.Contains(cardName, StringComparison.OrdinalIgnoreCase))
                             {
-                                if (item.TryGetProperty("Psykologisk begrundelse", out var expl))
-                                    return expl.GetString();
+                                var found = ReadExplanation(item);
+                                if (!string.IsNullOrWhiteSpace(found))
+                                    return found;
                             }
                         }
                     }
                 }
             }
 
-            // Fallback: try to find any entry for characterId with a Psykologisk begrundelse
             if (root.TryGetProperty("gears", out var gears2))
             {
                 foreach (var item in gears2.EnumerateArray())
                 {
                     if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
                     {
-                        if (item.TryGetProperty("Psykologisk begrundelse", out var expl))
-                            return expl.GetString();
+                        var found = ReadExplanation(item);
+                        if (!string.IsNullOrWhiteSpace(found))
+                            return found;
                     }
                 }
             }
@@ -256,6 +284,8 @@ public class GameSessionsController : ControllerBase
         session.CurrentQuestionIndex = 0;
         session.QuestionPhase = QuestionPhase.Answering;
         session.State = GameState.Lobby;
+
+        EnsureQuestionExplanations(session);
 
         var created = await _repository.CreateAsync(session);
 
@@ -374,6 +404,8 @@ public class GameSessionsController : ControllerBase
         if (session.State != GameState.Running)
             return BadRequest("Spillet kører ikke.");
 
+        EnsureQuestionExplanations(session);
+
         // Populate missing explanations from excel JSON so player previews include the psychological rationale
         var currentQuestion = session.Questions.ElementAtOrDefault(session.CurrentQuestionIndex);
         if (currentQuestion != null)
@@ -484,6 +516,8 @@ public class GameSessionsController : ControllerBase
 
         if (state.CurrentQuestionIndex != session.CurrentQuestionIndex)
             return BadRequest("Spilleren svarer på et forkert spørgsmål.");
+
+        EnsureQuestionExplanations(session);
 
         // Store character states before applying impacts
         var characterSnapshots = session.Characters

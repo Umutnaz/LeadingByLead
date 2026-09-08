@@ -660,6 +660,8 @@
                         .Select(effect => new CharacterEffect
                         {
                             CharacterId = effect.CharacterId,
+                            Reaction = effect.Reaction,
+                            Explanation = effect.Explanation,
 
                             Changes = effect.Changes?
                                 .Select(change => new StatChange
