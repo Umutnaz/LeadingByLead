@@ -2,8 +2,6 @@ using Backend.Repositories;
 using Backend.Services;
 using Core;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
-using System.IO;
 
 namespace Backend.Controllers;
 
@@ -15,257 +13,10 @@ public class GameSessionsController : ControllerBase
 
     private readonly IGameSessionRepository _repository;
 
-    // Cache for excel data to avoid repeated file IO
-    private static JsonDocument? _excelDoc;
-
     public GameSessionsController(
         IGameSessionRepository repository)
     {
         _repository = repository;
-    }
-
-    private static void EnsureExcelLoaded()
-    {
-        if (_excelDoc != null)
-            return;
-
-        // Try several candidate paths relative to current directory
-        var candidates = new[]
-        {
-            "excel_data.json",
-            "..\\excel_data.json",
-            "..\\..\\excel_data.json",
-            Path.Combine(AppContext.BaseDirectory, "..\\..\\..\\..\\excel_data.json"),
-        };
-
-        foreach (var path in candidates)
-        {
-            try
-            {
-                if (System.IO.File.Exists(path))
-                {
-                    var json = System.IO.File.ReadAllText(path);
-                    _excelDoc = JsonDocument.Parse(json);
-                    return;
-                }
-            }
-            catch
-            {
-                // ignore and continue
-            }
-        }
-
-        // If not found, leave _excelDoc null
-    }
-
-    // More flexible lookup: try matching by Kortnavn/Gearnavn contained in option text, then by ID, then fallbacks.
-    private static string? FindExplanationForOptionFlexible(string optionText, string characterId)
-    {
-        if (string.IsNullOrWhiteSpace(optionText) && string.IsNullOrWhiteSpace(characterId))
-            return null;
-
-        EnsureExcelLoaded();
-        if (_excelDoc == null)
-            return null;
-
-        try
-        {
-            var root = _excelDoc.RootElement;
-            var normalizedOption = (optionText ?? string.Empty).Trim();
-
-            static string? ReadExplanation(System.Text.Json.JsonElement item)
-            {
-                if (item.TryGetProperty("Psykologisk begrundelse", out var expl) && !string.IsNullOrWhiteSpace(expl.GetString()))
-                    return expl.GetString();
-                return null;
-            }
-
-            // 1) Match by Kortnavn (action cards)
-            if (root.TryGetProperty("action_cards", out var cards))
-            {
-                foreach (var item in cards.EnumerateArray())
-                {
-                    if (item.TryGetProperty("Kortnavn", out var kn))
-                    {
-                        var cardName = (kn.GetString() ?? string.Empty).Trim();
-                        if (!string.IsNullOrWhiteSpace(cardName) && normalizedOption.IndexOf(cardName, StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            var found = ReadExplanation(item);
-                            if (!string.IsNullOrWhiteSpace(found))
-                                return found;
-                        }
-                    }
-                }
-            }
-
-            // 2) Match by Gearnavn (gears)
-            if (root.TryGetProperty("gears", out var gears))
-            {
-                foreach (var item in gears.EnumerateArray())
-                {
-                    if (item.TryGetProperty("Gearnavn", out var gn))
-                    {
-                        var gearName = (gn.GetString() ?? string.Empty).Trim();
-                        if (!string.IsNullOrWhiteSpace(gearName) && normalizedOption.IndexOf(gearName, StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            var found = ReadExplanation(item);
-                            if (!string.IsNullOrWhiteSpace(found))
-                                return found;
-                        }
-                    }
-                }
-            }
-
-            // 3) Match by ID (if available)
-            if (!string.IsNullOrWhiteSpace(characterId))
-            {
-                if (root.TryGetProperty("action_cards", out var cards2))
-                {
-                    foreach (var item in cards2.EnumerateArray())
-                    {
-                        if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
-                        {
-                            var found = ReadExplanation(item);
-                            if (!string.IsNullOrWhiteSpace(found))
-                                return found;
-                        }
-                    }
-                }
-
-                if (root.TryGetProperty("gears", out var gears2))
-                {
-                    foreach (var item in gears2.EnumerateArray())
-                    {
-                        if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
-                        {
-                            var found = ReadExplanation(item);
-                            if (!string.IsNullOrWhiteSpace(found))
-                                return found;
-                        }
-                    }
-                }
-            }
-
-            // 4) Last-resort: any Kortnavn partial match with explanation
-            if (root.TryGetProperty("action_cards", out var cards3))
-            {
-                foreach (var item in cards3.EnumerateArray())
-                {
-                    var found = ReadExplanation(item);
-                    if (!string.IsNullOrWhiteSpace(found) && item.TryGetProperty("Kortnavn", out var kn) && normalizedOption.IndexOf((kn.GetString() ?? string.Empty), StringComparison.OrdinalIgnoreCase) >= 0)
-                        return found;
-                }
-            }
-        }
-        catch
-        {
-            // ignore parsing errors
-        }
-
-        return null;
-    }
-
-    private static void EnsureQuestionExplanations(GameSession session)
-    {
-        if (session == null)
-            return;
-
-        foreach (var question in session.Questions)
-        {
-            foreach (var option in question.AnswerOptions)
-            {
-                foreach (var effect in option.CharacterEffects)
-                {
-                    if (string.IsNullOrWhiteSpace(effect.Explanation))
-                    {
-                        var explanation = FindExplanationForOptionFlexible(option.Text ?? string.Empty, effect.CharacterId);
-                        if (!string.IsNullOrWhiteSpace(explanation))
-                            effect.Explanation = explanation;
-                    }
-                }
-            }
-        }
-    }
-
-    private static string? FindExplanationForOption(string optionText, string characterId)
-    {
-        if (string.IsNullOrWhiteSpace(optionText) || string.IsNullOrWhiteSpace(characterId))
-            return null;
-
-        EnsureExcelLoaded();
-        if (_excelDoc == null)
-            return null;
-
-        try
-        {
-            var root = _excelDoc.RootElement;
-
-            static string? ReadExplanation(System.Text.Json.JsonElement item)
-            {
-                if (item.TryGetProperty("Psykologisk begrundelse", out var expl) && !string.IsNullOrWhiteSpace(expl.GetString()))
-                    return expl.GetString();
-                return null;
-            }
-
-            if (root.TryGetProperty("gears", out var gears))
-            {
-                foreach (var item in gears.EnumerateArray())
-                {
-                    if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
-                    {
-                        if (item.TryGetProperty("Gearnavn", out var gn))
-                        {
-                            var gearName = gn.GetString() ?? string.Empty;
-                            if (!string.IsNullOrWhiteSpace(gearName) && optionText.Contains(gearName, StringComparison.OrdinalIgnoreCase))
-                            {
-                                var found = ReadExplanation(item);
-                                if (!string.IsNullOrWhiteSpace(found))
-                                    return found;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (root.TryGetProperty("action_cards", out var cards))
-            {
-                foreach (var item in cards.EnumerateArray())
-                {
-                    if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
-                    {
-                        if (item.TryGetProperty("Kortnavn", out var kn))
-                        {
-                            var cardName = kn.GetString() ?? string.Empty;
-                            if (!string.IsNullOrWhiteSpace(cardName) && optionText.Contains(cardName, StringComparison.OrdinalIgnoreCase))
-                            {
-                                var found = ReadExplanation(item);
-                                if (!string.IsNullOrWhiteSpace(found))
-                                    return found;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (root.TryGetProperty("gears", out var gears2))
-            {
-                foreach (var item in gears2.EnumerateArray())
-                {
-                    if (item.TryGetProperty("ID", out var idProp) && idProp.GetString() == characterId)
-                    {
-                        var found = ReadExplanation(item);
-                        if (!string.IsNullOrWhiteSpace(found))
-                            return found;
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // ignore parsing errors
-        }
-
-        return null;
     }
 
     [HttpPost]
@@ -284,8 +35,6 @@ public class GameSessionsController : ControllerBase
         session.CurrentQuestionIndex = 0;
         session.QuestionPhase = QuestionPhase.Answering;
         session.State = GameState.Lobby;
-
-        EnsureQuestionExplanations(session);
 
         var created = await _repository.CreateAsync(session);
 
@@ -404,26 +153,6 @@ public class GameSessionsController : ControllerBase
         if (session.State != GameState.Running)
             return BadRequest("Spillet kører ikke.");
 
-        EnsureQuestionExplanations(session);
-
-        // Populate missing explanations from excel JSON so player previews include the psychological rationale
-        var currentQuestion = session.Questions.ElementAtOrDefault(session.CurrentQuestionIndex);
-        if (currentQuestion != null)
-        {
-            foreach (var option in currentQuestion.AnswerOptions)
-            {
-                foreach (var effect in option.CharacterEffects)
-                {
-                    if (string.IsNullOrWhiteSpace(effect.Explanation))
-                    {
-                        var found = FindExplanationForOptionFlexible(option.Text ?? string.Empty, effect.CharacterId);
-                        if (!string.IsNullOrWhiteSpace(found))
-                            effect.Explanation = found;
-                    }
-                }
-            }
-        }
-
         // Mark effects revealed so player UIs can display the preview
         session.EffectsRevealed = true;
 
@@ -517,8 +246,6 @@ public class GameSessionsController : ControllerBase
         if (state.CurrentQuestionIndex != session.CurrentQuestionIndex)
             return BadRequest("Spilleren svarer på et forkert spørgsmål.");
 
-        EnsureQuestionExplanations(session);
-
         // Store character states before applying impacts
         var characterSnapshots = session.Characters
             .Select(c => new CharacterSnapshot
@@ -607,10 +334,8 @@ public class GameSessionsController : ControllerBase
                             {
                                 var combined = effect.Reaction;
 
-                                // Prefer explicit Explanation on the effect; otherwise try to find one in the excel JSON
-                                var explanation = !string.IsNullOrWhiteSpace(effect.Explanation)
-                                    ? effect.Explanation
-                                    : FindExplanationForOptionFlexible(option.Text ?? string.Empty, effect.CharacterId) ?? string.Empty;
+                                // Explanations are included in the seeded question content.
+                                var explanation = effect.Explanation;
 
                                 if (!string.IsNullOrWhiteSpace(explanation))
                                     combined = combined + " — " + explanation;
