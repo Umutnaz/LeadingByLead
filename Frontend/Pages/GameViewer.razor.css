@@ -620,6 +620,45 @@
     margin-bottom: 0.8rem;
 }
 
+.character-result > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+}
+
+.character-result > header h2 {
+    margin-bottom: 0;
+}
+
+.character-average {
+    display: grid;
+    justify-items: end;
+    gap: 0.15rem;
+}
+
+.character-average span {
+    color: var(--text-soft);
+    font-size: 0.78rem;
+}
+
+.character-average strong {
+    font-size: 1.15rem;
+}
+
+.change-row.unchanged {
+    opacity: 0.72;
+}
+
+.change-row.positive strong {
+    color: var(--green);
+}
+
+.change-row.negative strong {
+    color: var(--red);
+}
+
 .change-list,
 .host-change-list {
     display: grid;

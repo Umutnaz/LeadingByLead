@@ -388,6 +388,30 @@
 
 .character-result h2 { margin-bottom: 0.8rem; }
 
+.host-character-result > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.host-character-result > header span {
+    color: var(--text-soft);
+    white-space: nowrap;
+}
+
+.host-change-row.unchanged {
+    opacity: 0.72;
+}
+
+.host-change-row.positive strong {
+    color: var(--green);
+}
+
+.host-change-row.negative strong {
+    color: var(--red);
+}
+
 .change-list, .host-change-list {
     display: grid;
     gap: 0.5rem;

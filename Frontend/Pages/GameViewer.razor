@@ -70,69 +70,65 @@
 
                 @if (session.QuestionPhase == QuestionPhase.Results)
                 {
-                    @if (latestResults.Count == 0)
+                    var displayResults = GetDisplayResults();
+
+                    @if (displayResults.Count == 0)
                     {
                         <div class="no-results">
-                            Dit seneste valg ændrede ikke gruppens værdier.
+                            Der er ingen karakterdata at vise.
                         </div>
                     }
                     else
                     {
                         <div class="result-list">
-                            @foreach (var result in latestResults)
+                            @foreach (var result in displayResults)
                             {
                                 <article class="character-result">
-                                    <h2>@result.CharacterName</h2>
+                                    <header>
+                                        <h2>@result.CharacterName</h2>
+                                        <div class="character-average">
+                                            <span>Gennemsnit</span>
+                                            <strong>@FormatNumber(CalculateCharacterAverage(result.After))</strong>
+                                        </div>
+                                    </header>
 
                                     @if (!HasAnyDifference(result))
                                     {
                                         <p class="no-character-change">
                                             Ingen ændringer
                                         </p>
-
-                                        @if (result.Reactions != null && result.Reactions.Count > 0)
-                                        {
-                                            <div class="reaction-list">
-                                                @foreach (var reaction in result.Reactions)
-                                                {
-                                                    <p class="reaction">@reaction</p>
-                                                }
-                                            </div>
-                                        }
                                     }
-                                    else
+
+                                    <div class="change-list">
+                                        @ResultRow(
+                                            "Tjenestemotivation",
+                                            result.Before.TjenesteMotivation,
+                                            result.After.TjenesteMotivation)
+
+                                        @ResultRow(
+                                            "Stress",
+                                            result.Before.Stress,
+                                            result.After.Stress)
+
+                                        @ResultRow(
+                                            "Social lyst",
+                                            result.Before.Sociallyst,
+                                            result.After.Sociallyst)
+
+                                        @ResultRow(
+                                            "Tillid",
+                                            result.Before.Tillid,
+                                            result.After.Tillid)
+                                    </div>
+
+                                    @if (result.Reactions != null && result.Reactions.Count > 0)
                                     {
-                                        <div class="change-list">
-                                            @ResultRow(
-                                                "Tjenestemotivation",
-                                                result.Before.TjenesteMotivation,
-                                                result.After.TjenesteMotivation)
-
-                                            @ResultRow(
-                                                "Stress",
-                                                result.Before.Stress,
-                                                result.After.Stress)
-
-                                            @ResultRow(
-                                                "Social lyst",
-                                                result.Before.Sociallyst,
-                                                result.After.Sociallyst)
-
-                                            @ResultRow(
-                                                "Tillid",
-                                                result.Before.Tillid,
-                                                result.After.Tillid)
+                                        <div class="reaction-list">
+                                            @foreach (var reaction in result.Reactions)
+                                            {
+                                                <p class="reaction">@reaction</p>
+                                            }
                                         </div>
-
-                                        @if (result.Reactions != null && result.Reactions.Count > 0)
-                                        {
-                                            <div class="reaction-list">
-                                                @foreach (var reaction in result.Reactions)
-                                                {
-                                                    <p class="reaction">@reaction</p>
-                                                }
-                                            </div>
-                                        }
                                     }
                                 </article>
                             }
@@ -149,7 +145,9 @@
                         {
                             @foreach (var option in currentQuestion.AnswerOptions.Select((value, index) => new { value, index }))
                             {
-                                <details class="answer-card answer-@option.index" open>
+                                <details @key="option.value.Id"
+                                         class="answer-card answer-@option.index"
+                                         open="@IsSelectedAnswer(option.value.Id)">
                                     <summary>
                                         <span>@GetAnswerIcon(option.index)</span>
 
@@ -523,6 +521,28 @@
         latestResults = ownState.LatestResults;
         hasAnswered = true;
 
+        selectedAnswerIds.Clear();
+
+        var ownAnswer = ownState.Answers
+            .LastOrDefault(answer =>
+                answer.QuestionId == currentQuestion?.Id);
+
+        if (ownAnswer != null && currentQuestion != null)
+        {
+            var validAnswerIds = currentQuestion.AnswerOptions
+                .Select(answer => answer.Id)
+                .ToHashSet();
+
+            foreach (var answerId in ownAnswer.AnswerIds)
+            {
+                if (!string.IsNullOrWhiteSpace(answerId) &&
+                    validAnswerIds.Contains(answerId))
+                {
+                    selectedAnswerIds.Add(answerId);
+                }
+            }
+        }
+
         if (ownState.Characters.Count > 0)
         {
             playerCharacters = session!.Characters
@@ -803,17 +823,50 @@
         int before,
         int after)
     {
-        if (before == after)
-            return @<text></text>;
-
         var difference = after - before;
         var sign = difference > 0 ? "+" : "";
+        var changeClass = difference switch
+        {
+            > 0 => "positive",
+            < 0 => "negative",
+            _ => "unchanged"
+        };
 
-        return @<div class="change-row">
+        return @<div class="change-row @changeClass">
             <span>@label</span>
             <span>@before → @after</span>
             <strong>@sign@difference</strong>
         </div>;
+    }
+
+    private bool IsSelectedAnswer(string answerId)
+    {
+        return selectedAnswerIds.Contains(answerId);
+    }
+
+    private List<CharacterResult> GetDisplayResults()
+    {
+        var resultsByCharacter = latestResults
+            .GroupBy(result => result.CharacterId)
+            .ToDictionary(group => group.Key, group => group.Last());
+
+        return playerCharacters
+            .Select(character =>
+            {
+                if (resultsByCharacter.TryGetValue(character.Id, out var result))
+                    return result;
+
+                var stats = CopyStats(character.CurrentStats);
+
+                return new CharacterResult
+                {
+                    CharacterId = character.Id,
+                    CharacterName = character.Name,
+                    Before = CopyStats(stats),
+                    After = CopyStats(stats)
+                };
+            })
+            .ToList();
     }
 
     private double GetAverageStat(
@@ -849,17 +902,18 @@
     private static double CalculateCharacterAverage(
         Character character)
     {
+        return CalculateCharacterAverage(character.CurrentStats);
+    }
+
+    private static double CalculateCharacterAverage(
+        CurrentStats stats)
+    {
         return
         (
-            character.CurrentStats
-                .TjenesteMotivation +
-
-            (100 -
-             character.CurrentStats.Stress) +
-
-            character.CurrentStats.Sociallyst +
-
-            character.CurrentStats.Tillid
+            stats.TjenesteMotivation +
+            (100 - stats.Stress) +
+            stats.Sociallyst +
+            stats.Tillid
         ) / 4.0;
     }
 

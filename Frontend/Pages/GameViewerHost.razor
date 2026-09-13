@@ -173,40 +173,34 @@
                                     @foreach (var result in state.LatestResults)
                                     {
                                         <section class="host-character-result">
-                                            <strong>@result.CharacterName</strong>
+                                            <header>
+                                                <strong>@result.CharacterName</strong>
+                                                <span>
+                                                    Gennemsnit:
+                                                    @FormatNumber(CalculateCharacterAverage(result.After))
+                                                </span>
+                                            </header>
 
                                             @if (!HasAnyDifference(result))
                                             {
                                                 <span>Ingen ændringer</span>
-
-                                                @if (result.Reactions != null && result.Reactions.Count > 0)
-                                                {
-                                                    <div class="host-reaction-list">
-                                                        @foreach (var reaction in result.Reactions)
-                                                        {
-                                                            <p class="reaction">@reaction</p>
-                                                        }
-                                                    </div>
-                                                }
                                             }
-                                            else
-                                            {
-                                                <div class="host-change-list">
-                                                    @ResultRow("Motivation", result.Before.TjenesteMotivation, result.After.TjenesteMotivation)
-                                                    @ResultRow("Stress", result.Before.Stress, result.After.Stress)
-                                                    @ResultRow("Social", result.Before.Sociallyst, result.After.Sociallyst)
-                                                    @ResultRow("Tillid", result.Before.Tillid, result.After.Tillid)
-                                                </div>
 
-                                                @if (result.Reactions != null && result.Reactions.Count > 0)
+                                            <div class="host-change-list">
+                                                @ResultRow("Motivation", result.Before.TjenesteMotivation, result.After.TjenesteMotivation)
+                                                @ResultRow("Stress", result.Before.Stress, result.After.Stress)
+                                                @ResultRow("Social", result.Before.Sociallyst, result.After.Sociallyst)
+                                                @ResultRow("Tillid", result.Before.Tillid, result.After.Tillid)
+                                            </div>
+
+                                            @if (result.Reactions != null && result.Reactions.Count > 0)
+                                            {
+                                                <div class="host-reaction-list">
+                                                    @foreach (var reaction in result.Reactions)
                                                 {
-                                                    <div class="host-reaction-list">
-                                                        @foreach (var reaction in result.Reactions)
-                                                        {
-                                                            <p class="reaction">@reaction</p>
-                                                        }
-                                                    </div>
+                                                        <p class="reaction">@reaction</p>
                                                 }
+                                                </div>
                                             }
                                         </section>
                                     }
@@ -552,17 +546,31 @@
 
     private RenderFragment ResultRow(string label, int before, int after)
     {
-        if (before == after)
-            return @<text></text>;
-
         var difference = after - before;
         var sign = difference > 0 ? "+" : "";
+        var changeClass = difference switch
+        {
+            > 0 => "positive",
+            < 0 => "negative",
+            _ => "unchanged"
+        };
 
-        return @<div class="host-change-row">
+        return @<div class="host-change-row @changeClass">
             <span>@label</span>
             <span>@before → @after</span>
             <strong>@sign@difference</strong>
         </div>;
+    }
+
+    private static double CalculateCharacterAverage(CurrentStats stats)
+    {
+        return
+        (
+            stats.TjenesteMotivation +
+            (100 - stats.Stress) +
+            stats.Sociallyst +
+            stats.Tillid
+        ) / 4.0;
     }
 
     private static double CalculateGroupAverage(PlayerState state)
